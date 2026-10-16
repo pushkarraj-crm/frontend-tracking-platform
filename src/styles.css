@@ -2186,3 +2186,32 @@ th {
     justify-content: flex-start;
   }
 }
+body:has(.stage-banner) {
+  --stagebar: 32px;
+  padding-top: var(--stagebar);
+}
+.stage-banner {
+  position: fixed;
+  z-index: 200;
+  inset: 0 0 auto;
+  height: var(--stagebar);
+  background: #f1e5ba;
+  color: #5f5225;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4px 14px;
+  font-size: 11px;
+  line-height: 1.5;
+  border-bottom: 1px solid #daca95;
+}
+body:has(.stage-banner) .sidebar {
+  top: var(--stagebar);
+  height: calc(100vh - var(--stagebar));
+}
+@media (max-width: 700px) {
+  body:has(.stage-banner) {
+    --stagebar: 46px;
+  }
+}

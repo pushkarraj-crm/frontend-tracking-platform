@@ -333,6 +333,12 @@ export default function App() {
   return (
     <SessionContext.Provider value={session}>
       <ToastContext.Provider value={setToast}>
+        {import.meta.env.VITE_DEPLOYMENT_MODE === "staging" && (
+          <aside className="stage-banner" role="status">
+            Personal testing only � Use dummy data � Email and live payments are
+            unavailable
+          </aside>
+        )}
         {failure && !session && (
           <div className="connection-banner">
             <ErrorBox error={failure} retry={bootstrap} />
