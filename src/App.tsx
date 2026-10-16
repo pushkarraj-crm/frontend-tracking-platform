@@ -335,7 +335,7 @@ export default function App() {
       <ToastContext.Provider value={setToast}>
         {import.meta.env.VITE_DEPLOYMENT_MODE === "staging" && (
           <aside className="stage-banner" role="status">
-            Personal testing only � Use dummy data � Email and live payments are
+            Personal testing only . Use dummy data . Email and live payments are
             unavailable
           </aside>
         )}
