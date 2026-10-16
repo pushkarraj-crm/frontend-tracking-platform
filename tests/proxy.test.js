@@ -16,9 +16,9 @@ it('preserves refresh cookies while moving their path behind the frontend API',(
 it('proxies authenticated requests and streams CSV without caching',async()=>{
  process.env.API_ORIGIN='https://backend.example.com';
  const fetcher=vi.spyOn(globalThis,'fetch').mockResolvedValue(new Response('id,amount\n1,1.00',{headers:{'Content-Type':'text/csv','X-Export-Truncated':'false'}}));
- const res=new Result();await handler({url:'/api/proxy?upstreamPath=reports/export/conversions&country=IN',method:'GET',headers:{cookie:'refresh_token=test',authorization:'Bearer test'}},res);
+ const res=new Result();await handler({url:'/api/proxy?upstreamPath=reports/export/conversions&country=IN',method:'GET',headers:{cookie:'refresh_token=test; csrf_token=csrf; unrelated_private_cookie=omit',authorization:'Bearer test'}},res);
  expect(fetcher.mock.calls[0][0].href).toBe('https://backend.example.com/reports/export/conversions?country=IN');
- expect(fetcher.mock.calls[0][1].headers.get('cookie')).toBe('refresh_token=test');
+ expect(fetcher.mock.calls[0][1].headers.get('cookie')).toBe('refresh_token=test; csrf_token=csrf');
  expect(res.text).toContain('1,1.00');expect(res.headers['cache-control']).toBe('no-store');
 });
 it('rejects path traversal and does not contact an arbitrary destination',async()=>{

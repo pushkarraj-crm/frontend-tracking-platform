@@ -27,7 +27,7 @@ export default async function handler(req, res) {
   } catch { return error(503,'Backend URL configuration is invalid.'); }
   const headers=new Headers();
   for(const name of ['accept','content-type','authorization','cookie','origin','user-agent','x-csrf-token','x-postback-key']) {
-    const value=req.headers[name]; if(typeof value==='string') headers.set(name,value);
+    let value=req.headers[name]; if(name==='cookie' && typeof value==='string') value=value.split(';').map(v=>v.trim()).filter(v=>/^(refresh_token|csrf_token)=/.test(v)).join('; '); if(typeof value==='string' && value) headers.set(name,value);
   }
   let body;
   if(!['GET','HEAD'].includes(req.method) && req.body!==undefined && req.body!==null) {
