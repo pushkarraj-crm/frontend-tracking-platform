@@ -29,6 +29,17 @@ export default async function handler(req, res) {
   for(const name of ['accept','content-type','authorization','cookie','origin','user-agent','x-csrf-token','x-postback-key']) {
     let value=req.headers[name]; if(name==='cookie' && typeof value==='string') value=value.split(';').map(v=>v.trim()).filter(v=>/^(refresh_token|csrf_token)=/.test(v)).join('; '); if(typeof value==='string' && value) headers.set(name,value);
   }
+  // Derive routing only from the actual request host; ignore client-supplied company headers.
+  const baseDomain=process.env.COMPANY_BASE_DOMAIN;
+  if(baseDomain) {
+    const host=String(req.headers.host||'').toLowerCase().split(':')[0];
+    const suffix='.'+baseDomain;
+    if(host.endsWith(suffix)) {
+      const slug=host.slice(0,-suffix.length);
+      if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return error(400,'Invalid company dashboard.');
+      headers.set('x-company-slug',slug);
+    }
+  }
   let body;
   if(!['GET','HEAD'].includes(req.method) && req.body!==undefined && req.body!==null) {
     body=Buffer.isBuffer(req.body)?req.body:typeof req.body==='string'?req.body:JSON.stringify(req.body);

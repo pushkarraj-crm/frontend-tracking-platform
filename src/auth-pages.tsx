@@ -35,7 +35,8 @@ export function AuthPage({ register = false }: { register?: boolean }) {
           help: "Use 12–128 characters.",
           full: true,
         },
-        { name: "company", label: "Company", placeholder: "Your company" },
+        { name: "company", label: "Company", placeholder: "Your company",
+          help: config?.company_databases ? "The first word creates your unique dashboard address. Each company has its own database." : undefined },
         {
           name: "business_type",
           label: "Business type",
@@ -181,6 +182,18 @@ export function AuthPage({ register = false }: { register?: boolean }) {
                   terms_accepted: true,
                   legal_version: config?.legal_version,
                 });
+                if (result.dashboard_url) {
+                  const target = new URL(result.dashboard_url);
+                  const slug = String(result.company_slug || "");
+                  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ||
+                      target.hostname !== `${slug}.${config?.company_base_domain}` ||
+                      !["http:", "https:"].includes(target.protocol) ||
+                      (target.protocol === "http:" && config?.company_base_domain !== "localhost")) {
+                    throw new Error("The company dashboard address is invalid. Contact support.");
+                  }
+                  window.location.assign(target.origin + "/login");
+                  return;
+                }
                 if (result.access_token) {
                   setSession(result as Session);
                   navigate("/");
