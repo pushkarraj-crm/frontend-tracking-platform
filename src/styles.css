@@ -2250,3 +2250,18 @@ body:has(.stage-banner) .sidebar {
   padding: 16px;
   color: #61745f;
 }
+
+.login-portals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 20px 0;
+}
+.login-portals [aria-current="page"] {
+  background: var(--green);
+  color: white;
+}
+.login-access-help {
+  font-size: 13px;
+  line-height: 1.6;
+}

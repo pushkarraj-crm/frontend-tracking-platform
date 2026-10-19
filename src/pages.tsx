@@ -720,6 +720,7 @@ export function Partners() {
     [offset, setOffset] = useState(0),
     [search, setSearch] = useState(""),
     [open, setOpen] = useState(false),
+    [createdPartner, setCreatedPartner] = useState<Row | null>(null),
     parents = useCatalog(user.role === "admin" && open ? "/users" : null),
     result = useData<Row[]>(`/users?offset=${offset}&limit=${size}`, version);
   return (
@@ -736,6 +737,31 @@ export function Partners() {
           )
         }
       />
+      {createdPartner && (
+        <Panel
+          title="Partner login access"
+          subtitle="Share this network login link and email with the partner. Share their initial password separately and securely."
+        >
+          <div className="network-form">
+            <p>
+              {createdPartner.email} · {createdPartner.role}
+            </p>
+            <p>
+              <a
+                href={`${window.location.origin}/login?portal=${createdPartner.role}`}
+              >{`${window.location.origin}/login?portal=${createdPartner.role}`}</a>{" "}
+              <CopyButton
+                value={`${window.location.origin}/login?portal=${createdPartner.role}`}
+              />
+            </p>
+            <p>
+              {createdPartner.email_verified
+                ? "The account can sign in with its email and initial password."
+                : "The partner must verify their email before signing in. They can resend verification from the login page."}
+            </p>
+          </div>
+        </Panel>
+      )}
       <Panel
         title="Your people"
         subtitle="Account access and partnership roles."
@@ -784,6 +810,15 @@ export function Partners() {
                   <span>
                     {r.email_verified ? "Verified" : "Awaiting verification"}
                   </span>
+                ),
+              },
+              {
+                key: "login",
+                title: "Login access",
+                render: (r: Row) => (
+                  <CopyButton
+                    value={`${window.location.origin}/login?portal=${["advertiser", "publisher", "affiliate"].includes(r.role) ? r.role : "network"}`}
+                  />
                 ),
               },
               {
@@ -873,7 +908,8 @@ export function Partners() {
             submit="Create account"
             onSubmit={async (body) => {
               if (body.role !== "publisher") delete body.parent_user_id;
-              await send("/users", body);
+              const partner = await send<Row>("/users", body);
+              setCreatedPartner(partner);
               setOpen(false);
               reload();
               toast("Partner account created.");

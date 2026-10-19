@@ -1,6 +1,6 @@
 import { useData } from "./hooks";
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -13,6 +13,13 @@ import { Brand } from "./brand";
 import { ErrorBox, Fields, Loading, type Field } from "./ui";
 const currentYear = new Date().getFullYear();
 export function AuthPage({ register = false }: { register?: boolean }) {
+  const [params] = useSearchParams();
+  const portal = ["advertiser", "publisher", "affiliate"].includes(
+    params.get("portal") || "",
+  )
+    ? params.get("portal")!
+    : "network";
+  const portalLabel = portal[0].toUpperCase() + portal.slice(1);
   const navigate = useNavigate(),
     options = useData<Row>(register ? "/auth/registration-options" : null),
     [sent, setSent] = useState(""),
@@ -35,8 +42,14 @@ export function AuthPage({ register = false }: { register?: boolean }) {
           help: "Use 12–128 characters.",
           full: true,
         },
-        { name: "company", label: "Company", placeholder: "Your company",
-          help: config?.company_databases ? "The first word creates your unique dashboard address. Each company has its own database." : undefined },
+        {
+          name: "company",
+          label: "Company",
+          placeholder: "Your company",
+          help: config?.company_databases
+            ? "The first word creates your unique dashboard address. Each company has its own database."
+            : undefined,
+        },
         {
           name: "business_type",
           label: "Business type",
@@ -80,7 +93,13 @@ export function AuthPage({ register = false }: { register?: boolean }) {
           autoComplete: "username",
           full: true,
         },
-        { name: "password", label: "Password", type: "password", full: true },
+        {
+          name: "password",
+          label: "Password",
+          type: "password",
+          full: true,
+          autoComplete: "current-password",
+        },
       ];
   return (
     <div className={`auth-layout ${register ? "registration" : ""}`}>
@@ -125,9 +144,11 @@ export function AuthPage({ register = false }: { register?: boolean }) {
       </aside>
       <section className="auth-form-side">
         <div className="auth-top">
-          {register ? "Already part of the network?" : "New to Relay?"}{" "}
+          {register
+            ? "Already part of a network?"
+            : "Starting your own network?"}{" "}
           <Link to={register ? "/login" : "/register"}>
-            {register ? "Sign in" : "Create an account"}{" "}
+            {register ? "Sign in" : "Create a network account"}{" "}
             <ArrowUpRight size={14} />
           </Link>
         </div>
@@ -136,13 +157,42 @@ export function AuthPage({ register = false }: { register?: boolean }) {
             {register ? "LET’S BUILD YOUR NETWORK" : "WELCOME BACK"}
           </span>
           <h1>
-            {register ? "Start something great." : "Your network awaits."}
+            {register
+              ? "Start something great."
+              : portal === "network"
+                ? "Your network awaits."
+                : `${portalLabel} login`}
           </h1>
           <p>
             {register
               ? "15 days free. No credit card. No setup fees."
-              : "Sign in to stay connected to every opportunity."}
+              : "Use the email and password provided by your network. Your account permissions determine the dashboard you can access."}
           </p>
+          {!register && (
+            <nav className="login-portals" aria-label="Login portals">
+              {["network", "advertiser", "publisher", "affiliate"].map(
+                (role) => (
+                  <Link
+                    key={role}
+                    className="button secondary"
+                    aria-current={portal === role ? "page" : undefined}
+                    to={role === "network" ? "/login" : `/login?portal=${role}`}
+                  >
+                    {role === "network"
+                      ? "Network team"
+                      : role[0].toUpperCase() + role.slice(1)}
+                  </Link>
+                ),
+              )}
+            </nav>
+          )}
+          {!register && (
+            <p className="login-access-help">
+              Advertiser or publisher without an account? Ask your network
+              administrator to add you under Partners. Open the login link for
+              your network; email verification may be required.
+            </p>
+          )}
           {sent ? (
             <div className="success-box" role="status">
               <Check size={22} />
@@ -185,11 +235,17 @@ export function AuthPage({ register = false }: { register?: boolean }) {
                 if (result.dashboard_url) {
                   const target = new URL(result.dashboard_url);
                   const slug = String(result.company_slug || "");
-                  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ||
-                      target.hostname !== `${slug}.${config?.company_base_domain}` ||
-                      !["http:", "https:"].includes(target.protocol) ||
-                      (target.protocol === "http:" && config?.company_base_domain !== "localhost")) {
-                    throw new Error("The company dashboard address is invalid. Contact support.");
+                  if (
+                    !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ||
+                    target.hostname !==
+                      `${slug}.${config?.company_base_domain}` ||
+                    !["http:", "https:"].includes(target.protocol) ||
+                    (target.protocol === "http:" &&
+                      config?.company_base_domain !== "localhost")
+                  ) {
+                    throw new Error(
+                      "The company dashboard address is invalid. Contact support.",
+                    );
                   }
                   window.location.assign(target.origin + "/login");
                   return;
