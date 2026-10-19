@@ -546,7 +546,7 @@ export function NetworkTools() {
               [],
               "Up to 100 conversion IDs. All changes succeed together, or none are saved. Invoiced conversions are protected.",
             ),
-            select("status", "Status", ["pending", "approved", "rejected"]),
+            select("status", "Status", ["approved", "rejected"]),
           ]}
           transform={(b) => parseJson(b, ["conversion_ids"])}
         />
@@ -596,6 +596,7 @@ function CampaignHealth() {
   );
 }
 function Automations() {
+  const [version, setVersion] = useState(0);
   const campaigns = useCatalog("/campaigns");
   return (
     <>
@@ -648,7 +649,24 @@ function Automations() {
         ]}
       />
       <Panel title="Automation rules">
-        <ResourceRows path="/tools/automation" />
+        <ResourceRows
+          path="/tools/automation"
+          version={version}
+          actions={(r) => (
+            <Action
+              run={async () => {
+                await send(
+                  `/tools/automation/${r.id}`,
+                  { active: !r.active },
+                  "PATCH",
+                );
+                setVersion((v) => v + 1);
+              }}
+            >
+              {r.active ? "Disable" : "Enable"}
+            </Action>
+          )}
+        />
       </Panel>
       <Panel title="Automation history">
         <ResourceRows path="/tools/automation-logs" />
@@ -657,6 +675,7 @@ function Automations() {
   );
 }
 function SmartLinks() {
+  const [version, setVersion] = useState(0);
   return (
     <>
       <RequestForm
@@ -678,7 +697,24 @@ function SmartLinks() {
         transform={(b) => parseJson(b, ["children"])}
       />
       <Panel title="Your smart links">
-        <ResourceRows path="/smart-links" />
+        <ResourceRows
+          path="/smart-links"
+          version={version}
+          actions={(r) => (
+            <Action
+              run={async () => {
+                await send(
+                  `/smart-links/${r.id}`,
+                  { active: !r.active },
+                  "PATCH",
+                );
+                setVersion((v) => v + 1);
+              }}
+            >
+              {r.active ? "Disable" : "Enable"}
+            </Action>
+          )}
+        />
       </Panel>
     </>
   );

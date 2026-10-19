@@ -1184,7 +1184,7 @@ export function Reports() {
     setExporting(true);
     try {
       const truncated = await download(
-        `/reports/export/${type}?${params}&max_rows=100000`,
+        `/reports/export/${type}?${type === "impressions" ? new URLSearchParams([...new URLSearchParams(params)].filter(([key]) => !["status", "event_key"].includes(key))).toString() : params}&max_rows=100000`,
         `relay-${type}.csv`,
       );
       toast(
@@ -1211,6 +1211,13 @@ export function Reports() {
               onClick={() => exportCSV("clicks")}
             >
               <ArrowDownToLine size={16} /> Clicks CSV
+            </button>
+            <button
+              className="button secondary"
+              disabled={exporting}
+              onClick={() => exportCSV("impressions")}
+            >
+              <ArrowDownToLine size={16} /> Impressions CSV
             </button>
             <button
               className="button primary"
@@ -1351,6 +1358,8 @@ export function Reports() {
                   date(row[key])
                 ) : ["revenue", "payout"].includes(key) ? (
                   money(row[key], row.currency)
+                ) : typeof row[key] === "object" ? (
+                  JSON.stringify(row[key])
                 ) : (
                   String(row[key] ?? "—")
                 ),
