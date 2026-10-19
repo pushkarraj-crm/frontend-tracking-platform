@@ -169,24 +169,6 @@ export function AuthPage({ register = false }: { register?: boolean }) {
               : "Use the email and password provided by your network. Your account permissions determine the dashboard you can access."}
           </p>
           {!register && (
-            <nav className="login-portals" aria-label="Login portals">
-              {["network", "advertiser", "publisher", "affiliate"].map(
-                (role) => (
-                  <Link
-                    key={role}
-                    className="button secondary"
-                    aria-current={portal === role ? "page" : undefined}
-                    to={role === "network" ? "/login" : `/login?portal=${role}`}
-                  >
-                    {role === "network"
-                      ? "Network team"
-                      : role[0].toUpperCase() + role.slice(1)}
-                  </Link>
-                ),
-              )}
-            </nav>
-          )}
-          {!register && (
             <p className="login-access-help">
               Advertiser or publisher without an account? Ask your network
               administrator to add you under Partners. Open the login link for

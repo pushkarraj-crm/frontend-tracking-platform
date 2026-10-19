@@ -720,6 +720,7 @@ export function Partners() {
     [offset, setOffset] = useState(0),
     [search, setSearch] = useState(""),
     [open, setOpen] = useState(false),
+    [partnerRole, setPartnerRole] = useState<string | undefined>(undefined),
     [createdPartner, setCreatedPartner] = useState<Row | null>(null),
     parents = useCatalog(user.role === "admin" && open ? "/users" : null),
     result = useData<Row[]>(`/users?offset=${offset}&limit=${size}`, version);
@@ -730,13 +731,70 @@ export function Partners() {
         description="The people behind your network’s next chapter."
         actions={
           user.role !== "staff" && (
-            <button className="button primary" onClick={() => setOpen(true)}>
-              <Plus size={17} />{" "}
-              {user.role === "affiliate" ? "Add publisher" : "Add partner"}
-            </button>
+            <div className="row-actions">
+              {user.role === "admin" && (
+                <>
+                  <button
+                    className="button secondary"
+                    onClick={() => {
+                      setPartnerRole("advertiser");
+                      setOpen(true);
+                    }}
+                  >
+                    Add advertiser
+                  </button>
+                  <button
+                    className="button secondary"
+                    onClick={() => {
+                      setPartnerRole("publisher");
+                      setOpen(true);
+                    }}
+                  >
+                    Add publisher
+                  </button>
+                </>
+              )}
+              <button
+                className="button primary"
+                onClick={() => {
+                  setPartnerRole(undefined);
+                  setOpen(true);
+                }}
+              >
+                <Plus size={17} />{" "}
+                {user.role === "affiliate" ? "Add publisher" : "Add partner"}
+              </button>
+            </div>
           )
         }
       />
+      <Panel
+        title="Partner login URLs"
+        subtitle="Create accounts in this dashboard, then share the matching login URL. Each link stays on this network's dashboard domain."
+      >
+        <div className="network-form">
+          {(user.role === "affiliate"
+            ? ["publisher"]
+            : ["advertiser", "publisher"]
+          ).map((role) => (
+            <div key={role}>
+              <strong>
+                {role === "advertiser" ? "Advertiser login" : "Publisher login"}
+              </strong>
+              <p>
+                <a
+                  href={`${window.location.origin}/login?portal=${role}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >{`${window.location.origin}/login?portal=${role}`}</a>{" "}
+                <CopyButton
+                  value={`${window.location.origin}/login?portal=${role}`}
+                />
+              </p>
+            </div>
+          ))}
+        </div>
+      </Panel>
       {createdPartner && (
         <Panel
           title="Partner login access"
@@ -890,7 +948,7 @@ export function Partners() {
                       ],
                 ),
                 defaultValue:
-                  user.role === "affiliate" ? "publisher" : undefined,
+                  user.role === "affiliate" ? "publisher" : partnerRole,
               },
               {
                 name: "parent_user_id",
