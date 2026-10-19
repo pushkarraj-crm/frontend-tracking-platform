@@ -1,7 +1,10 @@
+import { CampaignOperations } from "./campaign-operations";
+import { NetworkOperations, NetworkTools } from "./network-operations";
+import { PartnerCallbacks } from "./callbacks-page";
 import { useData } from "./hooks";
 import { SessionContext, ToastContext, useSession, useToast } from "./context";
 import { Brand } from "./brand";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode, type CSSProperties } from "react";
 import {
   Link,
   Navigate,
@@ -61,6 +64,30 @@ import {
 } from "./business-pages";
 const currentYear = new Date().getFullYear();
 const navigation = [
+  {
+    path: "/campaign-operations",
+    label: "Campaign operations",
+    icon: Tag,
+    roles: ["admin", "staff", "advertiser", "publisher", "affiliate"],
+  },
+  {
+    path: "/network",
+    label: "Network settings",
+    icon: Settings2,
+    roles: ["admin", "staff", "advertiser", "publisher", "affiliate"],
+  },
+  {
+    path: "/tools",
+    label: "Network tools",
+    icon: Network,
+    roles: ["admin", "staff", "advertiser", "publisher", "affiliate"],
+  },
+  {
+    path: "/callbacks",
+    label: "Publisher callbacks",
+    icon: Network,
+    roles: ["admin", "staff", "publisher", "affiliate"],
+  },
   {
     path: "/",
     label: "Overview",
@@ -160,6 +187,9 @@ function Layout() {
   const [open, setOpen] = useState(false),
     [leaving, setLeaving] = useState(false);
   const [now] = useState(Date.now);
+  const branding = useData<Row>(
+    user.role === "platform_admin" ? null : "/branding",
+  );
   const workspace = useData<Row>("/workspace"),
     company = workspace.data?.name || "Your network";
   const days = workspace.data?.trial_ends_at
@@ -182,10 +212,28 @@ function Layout() {
     }
   }
   return (
-    <div className="app-shell">
+    <div
+      className="app-shell"
+      style={
+        branding.data?.accent_color
+          ? ({ "--green": branding.data.accent_color } as CSSProperties)
+          : undefined
+      }
+    >
       <aside className={`sidebar ${open ? "is-open" : ""}`}>
         <Link to="/" className="brand-link">
-          <Brand />
+          {branding.data?.logo_url ? (
+            <img
+              src={branding.data.logo_url}
+              alt={`${company} logo`}
+              width="150"
+              height="45"
+              style={{ objectFit: "contain" }}
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <Brand />
+          )}
         </Link>
         <button
           className="mobile-close icon-button"
@@ -386,6 +434,10 @@ export default function App() {
             element={session ? <Layout /> : <Navigate to="/login" replace />}
           >
             {[
+              ["/campaign-operations", CampaignOperations],
+              ["/network", NetworkOperations],
+              ["/tools", NetworkTools],
+              ["/callbacks", PartnerCallbacks],
               ["/", Dashboard],
               ["/offers", Campaigns],
               ["/partners", Partners],

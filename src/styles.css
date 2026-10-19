@@ -2215,3 +2215,38 @@ body:has(.stage-banner) .sidebar {
     --stagebar: 46px;
   }
 }
+
+.network-form {
+  padding: 24px;
+  max-width: 100%;
+}
+.network-form select {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  margin: 8px 0;
+  border: 1px solid #d5dfd8;
+  border-radius: 8px;
+  background: white;
+  color: #274d3e;
+}
+.network-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 20px 0;
+}
+.network-result {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #f4f7f4;
+  padding: 18px;
+  border-radius: 10px;
+  max-height: 480px;
+  overflow: auto;
+  font-size: 13px;
+}
+.network-note {
+  padding: 16px;
+  color: #61745f;
+}

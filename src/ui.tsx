@@ -309,6 +309,8 @@ export function Fields({
             "daily_revenue",
             "total_revenue",
             "minimum_amount",
+            "sale_percentage",
+            "threshold",
           ].includes(field.name)
             ? Number(value)
             : value;
@@ -386,8 +388,16 @@ export function Fields({
                     min={field.min}
                     max={field.max}
                     step={field.step}
-                    minLength={field.type === "password" ? 12 : undefined}
-                    maxLength={field.type === "password" ? 128 : undefined}
+                    minLength={
+                      field.type === "password" && field.name === "password"
+                        ? 12
+                        : undefined
+                    }
+                    maxLength={
+                      field.type === "password" && field.name === "password"
+                        ? 128
+                        : undefined
+                    }
                     autoComplete={
                       field.autoComplete ||
                       (field.type === "password" ? "new-password" : "off")

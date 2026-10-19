@@ -275,11 +275,11 @@ export function Dashboard() {
             label="Conversion rate"
             value={
               summary.data?.clicks
-                ? `${((approved / summary.data.clicks) * 100).toFixed(2)}%`
+                ? `${(((summary.data.approved_unique_clicks ?? approved) / summary.data.clicks) * 100).toFixed(2)}%`
                 : "0.00%"
             }
             icon={TrendingUp}
-            hint="Approved conversions ÷ clicks"
+            hint="Clicks with approved conversions ÷ clicks"
           />
         </div>
       )}
@@ -1168,6 +1168,9 @@ export function Reports() {
     [exporting, setExporting] = useState(false);
   const params = query({
       ...applied,
+      ...(dataset === "impressions"
+        ? { status: undefined, event_key: undefined }
+        : {}),
       start: applied.start
         ? new Date(applied.start + "T00:00:00Z").toISOString()
         : undefined,
@@ -1235,6 +1238,13 @@ export function Reports() {
           { key: "affiliate_id", label: "Partner ID" },
           { key: "country", label: "Country code" },
           { key: "sub_id", label: "Placement ID" },
+          { key: "event_key", label: "Event code" },
+          { key: "source", label: "Traffic source" },
+          { key: "aff_click_id", label: "Publisher click ID" },
+          ...Array.from({ length: 10 }, (_, i) => ({
+            key: `aff_sub${i + 1}`,
+            label: `Publisher sub ${i + 1}`,
+          })),
         ].map((f) => (
           <label key={f.key}>
             {f.label}
@@ -1274,6 +1284,8 @@ export function Reports() {
               "country",
               "device",
               "operating_system",
+              "source",
+              "event",
               "day",
               "hour",
             ].map((v) => (
@@ -1292,7 +1304,7 @@ export function Reports() {
         subtitle="Currency totals remain separate. Maximum reporting window: 366 days."
         actions={
           <div className="tabs">
-            {["grouped", "clicks", "conversions"].map((v) => (
+            {["grouped", "clicks", "conversions", "impressions"].map((v) => (
               <button
                 className={dataset === v ? "selected" : ""}
                 key={v}

@@ -10,6 +10,8 @@ export interface User {
   email: string;
   role: Role;
   name?: string;
+  api_enabled?: boolean;
+  staff_permissions?: string[] | null;
   parent_user_id?: string;
 }
 export interface Session {
