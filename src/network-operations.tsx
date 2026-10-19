@@ -431,7 +431,11 @@ function Branding() {
       fields={[
         text("network_name", "Network name"),
         text("accent_color", "Accent colour", { type: "color" }),
-        text("logo_url", "HTTPS logo URL", { type: "url", required: false }),
+        text("logo_url", "HTTPS logo URL", {
+          type: "url",
+          required: false,
+          help: "This deployment displays logos hosted on the frontend origin. External logo configuration is stored for a future narrowly approved image host.",
+        }),
         text("support_email", "Support email", {
           type: "email",
           required: false,

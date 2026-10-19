@@ -190,6 +190,11 @@ function Layout() {
   const branding = useData<Row>(
     user.role === "platform_admin" ? null : "/branding",
   );
+  const logoUrl =
+    branding.data?.logo_url &&
+    new URL(branding.data.logo_url).origin === window.location.origin
+      ? branding.data.logo_url
+      : null;
   const workspace = useData<Row>("/workspace"),
     company = workspace.data?.name || "Your network";
   const days = workspace.data?.trial_ends_at
@@ -222,9 +227,9 @@ function Layout() {
     >
       <aside className={`sidebar ${open ? "is-open" : ""}`}>
         <Link to="/" className="brand-link">
-          {branding.data?.logo_url ? (
+          {logoUrl ? (
             <img
-              src={branding.data.logo_url}
+              src={logoUrl}
               alt={`${company} logo`}
               width="150"
               height="45"
