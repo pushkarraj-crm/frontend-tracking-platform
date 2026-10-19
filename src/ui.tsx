@@ -80,7 +80,7 @@ export function Badge({ value }: { value: unknown }) {
       : String(value ?? "pending");
   return (
     <span
-      className={`badge ${["active", "approved", "processed", "delivered", "verified", "true"].includes(label) ? "positive" : ["rejected", "failed", "suspended", "inactive", "halted"].includes(label) ? "negative" : ""}`}
+      className={`badge ${["active", "approved", "paid", "processed", "delivered", "verified", "true"].includes(label) ? "positive" : ["rejected", "failed", "suspended", "inactive", "halted"].includes(label) ? "negative" : ""}`}
     >
       <i />
       {label.replaceAll("_", " ")}

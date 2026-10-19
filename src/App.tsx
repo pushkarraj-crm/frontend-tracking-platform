@@ -28,7 +28,6 @@ import {
   Sparkles,
   Tag,
   Users,
-  Wallet,
   X,
   ChartNoAxesCombined,
   ReceiptText,
@@ -44,18 +43,22 @@ import { ErrorBox, Loading } from "./ui";
 import { AuthPage, AccountPage } from "./auth-pages";
 import {
   Dashboard,
-  Offers,
   Partners,
   LinksPage,
   Conversions,
   Reports,
-  Domains,
   Fraud,
-  Payouts,
   Billing,
   Settings,
   Platform,
 } from "./pages";
+import {
+  Campaigns,
+  Applications,
+  Invoices,
+  AdvertiserDomains,
+  Postbacks,
+} from "./business-pages";
 const currentYear = new Date().getFullYear();
 const navigation = [
   {
@@ -66,7 +69,7 @@ const navigation = [
   },
   {
     path: "/offers",
-    label: "Offers",
+    label: "Campaigns",
     icon: Tag,
     roles: ["admin", "staff", "affiliate", "publisher", "advertiser"],
   },
@@ -96,9 +99,9 @@ const navigation = [
   },
   {
     path: "/payouts",
-    label: "Payouts",
-    icon: Wallet,
-    roles: ["admin", "staff", "affiliate", "publisher"],
+    label: "Publisher invoices",
+    icon: ReceiptText,
+    roles: ["admin", "staff", "publisher", "advertiser"],
   },
   {
     path: "/fraud",
@@ -108,9 +111,21 @@ const navigation = [
   },
   {
     path: "/domains",
-    label: "Tracking domains",
+    label: "Advertiser domains",
     icon: Globe2,
-    roles: ["admin", "staff"],
+    roles: ["admin", "staff", "advertiser"],
+  },
+  {
+    path: "/applications",
+    label: "Applications",
+    icon: Users,
+    roles: ["admin", "staff", "advertiser", "publisher"],
+  },
+  {
+    path: "/postbacks",
+    label: "S2S postbacks",
+    icon: Network,
+    roles: ["admin", "staff", "advertiser", "publisher"],
   },
   {
     path: "/billing",
@@ -372,15 +387,17 @@ export default function App() {
           >
             {[
               ["/", Dashboard],
-              ["/offers", Offers],
+              ["/offers", Campaigns],
               ["/partners", Partners],
               ["/links", LinksPage],
               ["/conversions", Conversions],
               ["/reports", Reports],
-              ["/payouts", Payouts],
+              ["/payouts", Invoices],
               ["/fraud", Fraud],
-              ["/domains", Domains],
+              ["/domains", AdvertiserDomains],
               ["/billing", Billing],
+              ["/applications", Applications],
+              ["/postbacks", Postbacks],
               ["/settings", Settings],
               ["/platform", Platform],
             ].map(([path, Component]) => {

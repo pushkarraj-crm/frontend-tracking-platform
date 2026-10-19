@@ -58,14 +58,16 @@ docker build -t relay-frontend .
 docker run --rm -p 8080:8080 -e API_UPSTREAM=http://api:8000 -e API_HOST_HEADER=relay.example.com --network YOUR_APPLICATION_NETWORK relay-frontend
 ```
 
-Put a TLS gateway in front of this container. Set the backend's `FRONTEND_BASE_URL` and `CORS_ORIGINS` to the exact public frontend origin. Keep frontend and API same-site; if using `/api`, preserve the cookie path rewriting. The backend must accept the proxy Host and trust forwarded protocol only from your ingress. Configure the backend's actual SMTP, legal URLs, GeoIP, Razorpay plans, per-network RazorpayX accounts and verified domains independently.
+Put a TLS gateway in front of this container. Set the backend's `FRONTEND_BASE_URL` and `CORS_ORIGINS` to the exact public frontend origin. Keep frontend and API same-site; if using `/api`, preserve the cookie path rewriting. The backend must accept the proxy Host and trust forwarded protocol only from your ingress. Configure the backend's actual SMTP, legal URLs, GeoIP, Razorpay plans, advertiser domain DNS/TLS configuration independently.
 
 For a direct API URL instead of `/api`, configure `VITE_API_BASE_URL` at build time and update the Content Security Policy `connect-src` to that exact API origin. Configure credentialed CORS and same-site HTTPS appropriately. No secret belongs in this image or frontend source. API business responses are never service-worker cached.
 
-Live payments, bank transfers and external DNS/TLS require staging verification before release.
+Live SaaS subscription payments and external DNS/TLS require staging verification before release.
 
 ## Vercel personal testing deployment
 
 This repository's `.env.production` enables the personal-testing banner and keeps browser API requests on `/api`. Vercel uses Node 24, the Vite `dist/` output, SPA deep-link rewrites, and `api/proxy.js`. Set server-only `API_ORIGIN` to the Render API's HTTPS origin (no path). Do not put provider secrets in VITE variables. The proxy streams CSV and rewrites HttpOnly refresh-cookie paths, with no API caching.
 
 This is a personal, non-commercial Hobby deployment. Do not use customer data or live payment keys. The paired Render Free database expires after 30 days, and the service sleeps while idle. For a commercial launch, select eligible hosting plans and restore the separately enforced production configuration.
+
+Campaigns, Applications, Publisher invoices, Advertiser domains and S2S postbacks use the backend campaign/invoice APIs. Advertisers pay publishers outside the platform. No payout funding UI is exposed.

@@ -1,0 +1,88 @@
+import type { Field } from "./ui";
+export const campaignRuleFields: Field[] = [
+  {
+    name: "countries",
+    label: "Country codes",
+    required: false,
+    help: "Comma-separated ISO codes, e.g. IN, US",
+  },
+  {
+    name: "devices",
+    label: "Devices",
+    required: false,
+    help: "desktop, mobile, tablet, unknown",
+  },
+  {
+    name: "operating_systems",
+    label: "Operating systems",
+    required: false,
+    help: "android, ios, windows, macos, linux, other",
+  },
+  {
+    name: "languages",
+    label: "Languages",
+    required: false,
+    help: "Comma-separated language codes, e.g. en, hi",
+  },
+  {
+    name: "starts_at",
+    label: "Starts at (UTC)",
+    type: "datetime-local",
+    required: false,
+  },
+  {
+    name: "ends_at",
+    label: "Ends at (UTC)",
+    type: "datetime-local",
+    required: false,
+  },
+  {
+    name: "utc_hours",
+    label: "Allowed UTC hours",
+    required: false,
+    help: "Comma-separated hours 0–23; blank allows all",
+  },
+  {
+    name: "denied_networks",
+    label: "Blocked IP networks",
+    required: false,
+    help: "Comma-separated CIDR networks",
+  },
+  ...[
+    "daily_clicks",
+    "total_clicks",
+    "daily_conversions",
+    "total_conversions",
+    "daily_revenue",
+    "total_revenue",
+  ].map((name) => ({
+    name,
+    label: name.replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase()),
+    type: "number",
+    min: name.includes("revenue") ? 0.0001 : 1,
+    step: name.includes("revenue") ? "0.0001" : "1",
+    required: false,
+  })),
+  {
+    name: "clicks_per_ip_minute",
+    label: "Clicks per IP / minute",
+    type: "number",
+    min: 1,
+    max: 10000,
+    defaultValue: 120,
+  },
+  {
+    name: "minimum_conversion_seconds",
+    label: "Minimum conversion delay (seconds)",
+    type: "number",
+    min: 0,
+    max: 3600,
+    defaultValue: 0,
+  },
+  {
+    name: "block_bots",
+    label: "Block common bots",
+    type: "checkbox",
+    defaultValue: true,
+  },
+];

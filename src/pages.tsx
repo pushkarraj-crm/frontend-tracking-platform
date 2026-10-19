@@ -1,3 +1,4 @@
+import { campaignRuleFields } from "./campaign-rule-fields";
 import { useData, useCatalog } from "./hooks";
 import { money, date, short } from "./format";
 import { useMemo, useState } from "react";
@@ -499,93 +500,7 @@ export function Offers() {
         ]
       : []),
   ];
-  const ruleFields: Field[] = [
-    {
-      name: "countries",
-      label: "Country codes",
-      required: false,
-      help: "Comma-separated ISO codes, e.g. IN, US",
-    },
-    {
-      name: "devices",
-      label: "Devices",
-      required: false,
-      help: "desktop, mobile, tablet, unknown",
-    },
-    {
-      name: "operating_systems",
-      label: "Operating systems",
-      required: false,
-      help: "android, ios, windows, macos, linux, other",
-    },
-    {
-      name: "languages",
-      label: "Languages",
-      required: false,
-      help: "Comma-separated language codes, e.g. en, hi",
-    },
-    {
-      name: "starts_at",
-      label: "Starts at",
-      type: "datetime-local",
-      required: false,
-    },
-    {
-      name: "ends_at",
-      label: "Ends at",
-      type: "datetime-local",
-      required: false,
-    },
-    {
-      name: "utc_hours",
-      label: "Allowed UTC hours",
-      required: false,
-      help: "Comma-separated hours 0–23; blank allows all",
-    },
-    {
-      name: "denied_networks",
-      label: "Blocked IP networks",
-      required: false,
-      help: "Comma-separated CIDR networks",
-    },
-    ...[
-      "daily_clicks",
-      "total_clicks",
-      "daily_conversions",
-      "total_conversions",
-      "daily_revenue",
-      "total_revenue",
-    ].map((name) => ({
-      name,
-      label: name.replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase()),
-      type: "number",
-      min: name.includes("revenue") ? 0.0001 : 1,
-      step: name.includes("revenue") ? "0.0001" : "1",
-      required: false,
-    })),
-    {
-      name: "clicks_per_ip_minute",
-      label: "Clicks per IP / minute",
-      type: "number",
-      min: 1,
-      max: 10000,
-      defaultValue: 120,
-    },
-    {
-      name: "minimum_conversion_seconds",
-      label: "Minimum conversion delay (seconds)",
-      type: "number",
-      min: 0,
-      max: 3600,
-      defaultValue: 0,
-    },
-    {
-      name: "block_bots",
-      label: "Block common bots",
-      type: "checkbox",
-      defaultValue: true,
-    },
-  ];
+  const ruleFields = campaignRuleFields;
   return (
     <>
       <PageHead
@@ -783,7 +698,9 @@ export function Offers() {
                       .map((v) => (key === "utc_hours" ? Number(v) : v));
                   for (const key of ["starts_at", "ends_at"])
                     if (body[key])
-                      body[key] = new Date(body[key]).toISOString();
+                      body[key] = new Date(
+                        String(body[key]) + "Z",
+                      ).toISOString();
                   await send(`/offers/${modal.id}/rules`, body, "PUT");
                   setModal(null);
                   toast("Offer rules updated.");
@@ -948,7 +865,7 @@ export function Partners() {
                 options: (parents.data || [])
                   .filter((r) => r.role === "affiliate")
                   .map((r) => ({ value: r.id, label: r.email })),
-                help: "Required for publishers created by a network admin.",
+                help: "Optional. Leave empty for a publisher who works directly with advertisers.",
               },
             ].filter(
               (f) => user.role !== "affiliate" || f.name !== "parent_user_id",
@@ -956,14 +873,6 @@ export function Partners() {
             submit="Create account"
             onSubmit={async (body) => {
               if (body.role !== "publisher") delete body.parent_user_id;
-              if (
-                user.role === "admin" &&
-                body.role === "publisher" &&
-                !body.parent_user_id
-              )
-                throw new Error(
-                  "Select a parent affiliate for this publisher.",
-                );
               await send("/users", body);
               setOpen(false);
               reload();
@@ -1191,7 +1100,7 @@ export function Conversions() {
                 title: "Received",
                 render: (r) => date(r.created_at),
               },
-              ...(staff(user.role)
+              ...(staff(user.role) || user.role === "advertiser"
                 ? [
                     {
                       key: "actions",
@@ -1675,375 +1584,6 @@ export function Fraud() {
           />
         )}
       </Panel>
-    </>
-  );
-}
-export function Payouts() {
-  const { user } = useSession(),
-    toast = useToast(),
-    [version, reload] = useReload(),
-    [tab, setTab] = useState("balances"),
-    [offset, setOffset] = useState(0),
-    [modal, setModal] = useState(""),
-    [requestKey, setRequestKey] = useState(""),
-    [providerNotice, setProviderNotice] = useState(""),
-    people = useCatalog(
-      user.role === "admin" || user.role === "staff" ? "/users" : null,
-    ),
-    provider = useData<Row>(
-      user.role === "admin" ? "/automated-payouts/provider" : null,
-      version,
-    );
-  const result = useData<Row[]>(
-    tab === "requests"
-      ? "/automated-payouts/requests?limit=100"
-      : `/payouts${tab === "balances" ? "/balances" : ""}?offset=${offset}&limit=${size}`,
-    version,
-  );
-  const recipients =
-    people.data
-      ?.filter((r) => ["affiliate", "publisher"].includes(r.role))
-      .map((r) => ({ value: r.id, label: r.email })) || [];
-  const recipient: Field = {
-    name: "affiliate_id",
-    source: people,
-    label: "Affiliate / publisher",
-    options: recipients,
-    full: true,
-  };
-  const providerFields: Field[] = [
-    { name: "key_id", label: "RazorpayX key ID", placeholder: "rzp_live_…" },
-    { name: "key_secret", label: "API key secret", type: "password" },
-    { name: "account_number", label: "Network funding account number" },
-    {
-      name: "webhook_secret",
-      label: "Webhook signing secret",
-      type: "password",
-      help: "At least 32 characters.",
-    },
-    {
-      name: "minimum_amount",
-      label: "Minimum payout (INR)",
-      type: "number",
-      min: 1,
-      step: "0.01",
-      defaultValue: provider.data?.minimum_amount || 1000,
-    },
-    {
-      name: "interval_hours",
-      label: "Schedule interval (hours)",
-      type: "number",
-      min: 1,
-      max: 744,
-      defaultValue: provider.data?.interval_hours || 168,
-    },
-    {
-      name: "automatic",
-      label: "Enable automatic payouts from this network’s account",
-      type: "checkbox",
-      defaultValue: provider.data?.automatic || false,
-      full: true,
-    },
-  ];
-  return (
-    <>
-      <PageHead
-        title="Payouts"
-        description="Reward your partners. Keep every rupee accounted for."
-        actions={
-          <>
-            {staff(user.role) && (
-              <button
-                className="button secondary"
-                onClick={() => setModal("manual")}
-              >
-                Record paid transfer
-              </button>
-            )}
-            {user.role === "admin" && (
-              <button
-                className="button primary"
-                onClick={() => {
-                  setRequestKey(crypto.randomUUID());
-                  setModal("transfer");
-                }}
-              >
-                <Plus size={17} /> New payout
-              </button>
-            )}
-          </>
-        }
-      />
-      {user.role === "admin" && (
-        <div className="payout-provider">
-          <span className="provider-logo">
-            R<span>↗</span>
-          </span>
-          <div>
-            <strong>RazorpayX · Your network’s account</strong>
-            <p>
-              {provider.loading
-                ? "Loading provider status…"
-                : provider.data?.configured
-                  ? `Connected · INR · ${provider.data.automatic ? "Automatic payouts enabled" : "Manual scheduling"} · Every ${provider.data.interval_hours} hours`
-                  : "Connect your own funded RazorpayX account to enable bank transfers."}
-            </p>
-            {provider.error && (
-              <p className="danger">{provider.error.message}</p>
-            )}
-          </div>
-          <div className="row-actions">
-            <button
-              className="button secondary"
-              onClick={() => setModal("beneficiary")}
-            >
-              Add beneficiary
-            </button>
-            <button
-              className="button secondary"
-              onClick={() => setModal("provider")}
-            >
-              {provider.data?.configured ? "Configure" : "Connect account"}{" "}
-              <ArrowUpRight size={15} />
-            </button>
-          </div>
-        </div>
-      )}
-      {providerNotice && (
-        <Secret title="Network payout webhook URL" value={providerNotice} />
-      )}
-      <Panel
-        title="Partner accounting"
-        subtitle="Available balances exclude reserved transfers. Financial totals stay separated by currency."
-        actions={
-          <div className="tabs">
-            {["balances", "history", "requests"].map((v) => (
-              <button
-                key={v}
-                className={tab === v ? "selected" : ""}
-                onClick={() => {
-                  setTab(v);
-                  setOffset(0);
-                }}
-              >
-                {v[0].toUpperCase() + v.slice(1)}
-              </button>
-            ))}
-          </div>
-        }
-      >
-        {result.error ? (
-          <ErrorBox error={result.error} />
-        ) : result.loading ? (
-          <Loading />
-        ) : (
-          <Table
-            rows={result.data || []}
-            offset={offset}
-            setOffset={tab === "requests" ? undefined : setOffset}
-            columns={[
-              {
-                key: "affiliate_id",
-                title: "Partner",
-                render: (r) => (
-                  <strong>
-                    {people.data?.find((p) => p.id === r.affiliate_id)?.email ||
-                      short(r.affiliate_id)}
-                  </strong>
-                ),
-              },
-              {
-                key: tab === "balances" ? "balance" : "amount",
-                title: tab === "balances" ? "Available balance" : "Amount",
-                render: (r) => (
-                  <strong className="amount">
-                    {money(
-                      tab === "balances" ? r.balance : r.amount,
-                      r.currency,
-                    )}
-                  </strong>
-                ),
-              },
-              ...(tab === "requests"
-                ? [
-                    {
-                      key: "status",
-                      title: "Status",
-                      render: (r: Row) => <Badge value={r.status} />,
-                    },
-                    {
-                      key: "created_at",
-                      title: "Requested",
-                      render: (r: Row) => date(r.created_at),
-                    },
-                    ...(user.role === "admin"
-                      ? [
-                          {
-                            key: "actions",
-                            title: "Actions",
-                            render: (r: Row) =>
-                              r.status === "queued" && (
-                                <Action
-                                  danger
-                                  run={async () => {
-                                    await send(
-                                      `/automated-payouts/requests/${r.id}/cancel`,
-                                    );
-                                    reload();
-                                    toast("Unsubmitted payout cancelled.");
-                                  }}
-                                >
-                                  Cancel unsubmitted
-                                </Action>
-                              ),
-                          },
-                        ]
-                      : []),
-                  ]
-                : tab === "history"
-                  ? [
-                      { key: "reference", title: "Reference" },
-                      {
-                        key: "created_at",
-                        title: "Paid at",
-                        render: (r: Row) => date(r.created_at),
-                      },
-                    ]
-                  : [{ key: "currency", title: "Currency" }]),
-            ]}
-          />
-        )}
-      </Panel>
-      <div className="footnote">
-        <ShieldCheck size={16} /> Transfers with an uncertain provider result
-        remain reserved until reconciled, preventing duplicate spending.
-      </div>
-      {modal && (
-        <Modal
-          title={
-            modal === "provider"
-              ? "Connect network RazorpayX account"
-              : modal === "beneficiary"
-                ? "Register a beneficiary"
-                : modal === "manual"
-                  ? "Record a completed transfer"
-                  : "Create an INR bank payout"
-          }
-          onClose={() => setModal("")}
-        >
-          {modal === "provider" ? (
-            <>
-              <div className="notice">
-                Use this network’s own credentials. Automatic payouts are
-                opt-in. Changing credentials requires entering the complete
-                secret set.
-              </div>
-              <Fields
-                fields={providerFields}
-                submit="Save network account"
-                onSubmit={async (body) => {
-                  const r = await send(
-                    "/automated-payouts/provider",
-                    body,
-                    "PUT",
-                  );
-                  setProviderNotice(r.webhook_url || "");
-                  setModal("");
-                  reload();
-                  toast("Network payout account configured.");
-                }}
-              />
-            </>
-          ) : modal === "beneficiary" ? (
-            <Fields
-              fields={[
-                recipient,
-                {
-                  name: "fund_account_id",
-                  label: "RazorpayX fund account ID",
-                  placeholder: "fa_…",
-                  full: true,
-                  help: "Create this beneficiary in this network’s RazorpayX account first.",
-                },
-              ]}
-              submit="Verify and save beneficiary"
-              onSubmit={async (body) => {
-                await send("/automated-payouts/beneficiaries", body, "PUT");
-                setModal("");
-                toast("Beneficiary verified using your network’s account.");
-              }}
-            />
-          ) : modal === "manual" ? (
-            <Fields
-              fields={[
-                recipient,
-                {
-                  name: "amount",
-                  label: "Amount transferred",
-                  type: "number",
-                  min: 0.0001,
-                  step: "0.0001",
-                },
-                { name: "currency", label: "Currency", defaultValue: "INR" },
-                {
-                  name: "reference",
-                  label: "Unique bank/provider reference",
-                  full: true,
-                },
-              ]}
-              submit="Record completed transfer"
-              onSubmit={async (body) => {
-                await send("/payouts", body);
-                setModal("");
-                reload();
-                toast("Completed transfer recorded.");
-              }}
-            >
-              <label className="check-label consent">
-                <input type="checkbox" required /> This transfer has already
-                been completed outside Relay.
-              </label>
-            </Fields>
-          ) : (
-            <Fields
-              fields={[
-                recipient,
-                {
-                  name: "amount",
-                  label: "Amount (INR)",
-                  type: "number",
-                  min: 0.01,
-                  step: "0.01",
-                  full: true,
-                },
-              ]}
-              submit="Queue bank transfer"
-              onSubmit={async (body) => {
-                await send("/automated-payouts/requests", {
-                  ...body,
-                  request_key: requestKey,
-                });
-                setModal("");
-                setTab("requests");
-                reload();
-                toast(
-                  "Payout queued. Your network’s account funds this transfer.",
-                );
-              }}
-            >
-              <div className="notice">
-                This action initiates an IMPS bank transfer using your network’s
-                RazorpayX account. Review the recipient and amount before
-                submitting.
-              </div>
-              <label className="check-label consent">
-                <input type="checkbox" required /> I have checked the recipient
-                and amount and authorize this transfer.
-              </label>
-            </Fields>
-          )}
-        </Modal>
-      )}
     </>
   );
 }
