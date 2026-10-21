@@ -189,7 +189,10 @@ export function CampaignOverview({
                     >
                       Test destination →
                     </button>
-                    <a className="text-button" href="/postbacks">
+                    <a
+                      className="text-button"
+                      href={`/postbacks?campaign=${encodeURIComponent(id)}`}
+                    >
                       Open S2S integration →
                     </a>
                   </li>

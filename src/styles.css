@@ -2312,3 +2312,30 @@ body:has(.stage-banner) .sidebar {
   .network-tabs { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 8px; }
   .network-tabs .button { flex-shrink: 0; }
 }
+
+.postback-content { padding: 24px; min-width: 0; line-height: 1.6; }
+.postback-content p { margin: 10px 0 18px; }
+.postback-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.postback-select { display: grid; gap: 8px; max-width: 600px; font-weight: 600; }
+.postback-select select { width: 100%; padding: 12px; border: 1px solid #d5dfd8; border-radius: 8px; background: white; color: inherit; }
+.postback-campaign { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; overflow-wrap: anywhere; }
+.postback-copy { display: flex; align-items: center; gap: 12px; background: #f4f7f4; border: 1px solid #d5dfd8; border-radius: 8px; padding: 14px; margin: 8px 0 24px; }
+.postback-copy code { flex: 1; overflow-wrap: anywhere; min-width: 0; }
+.postback-steps { padding-left: 24px; }
+.postback-steps li { margin: 20px 0; padding-left: 4px; }
+.postback-steps small { display: block; margin-top: 8px; color: #61745f; }
+.postback-hint { color: #61745f; font-size: 13px; }
+.postback-content h3 { margin-top: 20px; }
+.postback-content h3:first-child { margin-top: 0; }
+.postback-advanced { border-top: 1px solid #d5dfd8; margin-top: 24px; padding-top: 18px; overflow-wrap: anywhere; }
+.postback-advanced summary { cursor: pointer; font-weight: 600; }
+.postback-advanced dl { display: grid; gap: 8px; }
+.postback-advanced dd { margin: 0 0 12px; }
+.postback-example { position: relative; margin: 16px 0; }
+.postback-example pre { padding: 18px 44px 18px 18px; background: #f4f7f4; border-radius: 8px; overflow-x: auto; font-size: 13px; }
+.postback-example > button { position: absolute; top: 10px; right: 10px; }
+.postback-reference { padding: 24px; border: 1px solid #d5dfd8; border-radius: 12px; background: white; margin-bottom: 24px; line-height: 1.6; }
+.postback-reference p { margin: 12px 0 20px; }
+.postback-empty { border: 1px dashed #c9d8ce; border-radius: 10px; padding: 24px; }
+@media (max-width: 1000px) { .postback-grid { grid-template-columns: 1fr; } }
+@media (max-width: 650px) { .postback-content, .postback-reference { padding: 16px; } }
