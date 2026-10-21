@@ -1,3 +1,4 @@
+import { LoginGate } from "./login-gate";
 import { CampaignOperations } from "./campaign-operations";
 import { NetworkOperations, NetworkTools } from "./network-operations";
 import { PartnerCallbacks } from "./callbacks-page";
@@ -415,18 +416,7 @@ export default function App() {
         <Routes>
           <Route
             path="/login"
-            element={
-              session ? (
-                <Navigate
-                  to={
-                    session.user.role === "platform_admin" ? "/platform" : "/"
-                  }
-                  replace
-                />
-              ) : (
-                <AuthPage />
-              )
-            }
+            element={<LoginGate />}
           />
           <Route
             path="/register"

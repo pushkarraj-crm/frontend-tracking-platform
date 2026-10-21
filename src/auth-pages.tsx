@@ -197,12 +197,12 @@ export function AuthPage({ register = false }: { register?: boolean }) {
             <Fields
               fields={fields}
               submit={
-                register ? "Create your account" : "Sign in to your network"
+                register ? "Create your account" : portal === "network" ? "Sign in to your network" : `Sign in as ${portal}`
               }
               onSubmit={async (body) => {
                 if (!register) {
-                  await login(body.email, body.password);
-                  navigate("/");
+                  const result = await login(body.email, body.password);
+                  if (portal === "network" || result.user.role === portal) navigate("/");
                   return;
                 }
                 if (!usage.length)

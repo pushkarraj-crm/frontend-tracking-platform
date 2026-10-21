@@ -58,7 +58,7 @@ it("portal links never submit or grant an account role", async () => {
   );
   await userEvent.type(screen.getByLabelText(/Password/), "test-password-123");
   await userEvent.click(
-    screen.getByRole("button", { name: "Sign in to your network" }),
+    screen.getByRole("button", { name: "Sign in as advertiser" }),
   );
   expect(fetch).toHaveBeenCalledTimes(1);
   expect(JSON.parse(String(fetch.mock.calls[0][1]?.body))).toEqual({
