@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { ApiError, type Row } from "./api";
+import { ConditionBuilder } from "./condition-builder";
 export function Loading() {
   return (
     <div className="loading" role="status">
@@ -267,6 +268,8 @@ export interface Field {
   full?: boolean;
   defaultValue?: string | number | boolean;
   autoComplete?: string;
+  uppercase?: boolean;
+  showWhen?: { name: string; value: string };
   source?: {
     hasMore: boolean;
     loadMore: () => void;
@@ -289,6 +292,18 @@ export function Fields({
 }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState<Error | null>(null);
+  const [selected, setSelected] = useState<Row>(() =>
+    Object.fromEntries(
+      fields.map((field) => [
+        field.name,
+        initial[field.name] ?? field.defaultValue ?? "",
+      ]),
+    ),
+  );
+  const visibleFields = fields.filter(
+    (field) =>
+      !field.showWhen || selected[field.showWhen.name] === field.showWhen.value,
+  );
   async function handle(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -296,9 +311,16 @@ export function Fields({
     const form = event.currentTarget;
     const values = new FormData(form);
     const body: Row = {};
-    for (const field of fields) {
+    for (const field of visibleFields) {
       const value = values.get(field.name);
       if (field.type === "checkbox") body[field.name] = value === "on";
+      else if (field.type === "list")
+        body[field.name] = String(value || "")
+          .split(",")
+          .map((v) => (field.uppercase ? v.trim().toUpperCase() : v.trim()))
+          .filter(Boolean);
+      else if (field.type === "multiselect")
+        body[field.name] = values.getAll(field.name);
       else if (value !== "" && value !== null)
         body[field.name] =
           field.type === "number" &&
@@ -329,112 +351,164 @@ export function Fields({
     }
   }
   return (
-    <form onSubmit={handle}>
+    <form
+      onSubmit={handle}
+      onChange={(event) => {
+        const target = event.target;
+        if (!(
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLSelectElement ||
+          target instanceof HTMLTextAreaElement
+        ))
+          return;
+        if (fields.some((field) => field.showWhen?.name === target.name))
+          setSelected((previous) => ({
+            ...previous,
+            [target.name]: target.value,
+          }));
+      }}
+    >
       <div className="form-grid">
-        {fields.map((field) => (
-          <label className={field.full ? "full" : ""} key={field.name}>
-            {field.type === "checkbox" ? (
-              <span className="check-label">
-                <input
-                  type="checkbox"
-                  name={field.name}
-                  defaultChecked={Boolean(
-                    initial[field.name] ?? field.defaultValue,
+        {visibleFields.map((field) =>
+          field.type === "conditions" ? (
+            <fieldset className="full condition-field" key={field.name}>
+              <legend>{field.label}</legend>
+              <ConditionBuilder
+                name={field.name}
+                initial={initial[field.name] ?? field.defaultValue}
+              />
+            </fieldset>
+          ) : (
+            <label className={field.full ? "full" : ""} key={field.name}>
+              {field.type === "checkbox" ? (
+                <span className="check-label">
+                  <input
+                    type="checkbox"
+                    name={field.name}
+                    defaultChecked={Boolean(
+                      initial[field.name] ?? field.defaultValue,
+                    )}
+                  />
+                  {field.label}
+                </span>
+              ) : (
+                <>
+                  {field.label}
+                  {field.required !== false && (
+                    <span className="required"> *</span>
                   )}
-                />
-                {field.label}
-              </span>
-            ) : (
-              <>
-                {field.label}
-                {field.required !== false && (
-                  <span className="required"> *</span>
-                )}
-                {field.options ? (
-                  <div className="select-wrap">
-                    <select
+                  {field.options ? (
+                    <div className="select-wrap">
+                      <select
+                        name={field.name}
+                        multiple={field.type === "multiselect"}
+                        required={field.required !== false}
+                        defaultValue={
+                          initial[field.name] ??
+                          field.defaultValue ??
+                          (field.type === "multiselect" ? [] : "")
+                        }
+                      >
+                        {field.type !== "multiselect" && (
+                          <option value="">
+                            Select {field.label.toLowerCase()}
+                          </option>
+                        )}
+                        {[
+                          ...field.options,
+                          ...[initial[field.name]]
+                            .flat()
+                            .filter(
+                              (value) =>
+                                value &&
+                                !field.options!.some(
+                                  (option) => option.value === value,
+                                ),
+                            )
+                            .map((value) => ({
+                              value: String(value),
+                              label: `${value} (current selection)`,
+                            })),
+                        ].map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown size={15} />
+                    </div>
+                  ) : field.type === "textarea" ? (
+                    <textarea
                       name={field.name}
                       required={field.required !== false}
-                      defaultValue={
-                        initial[field.name] ?? field.defaultValue ?? ""
+                      defaultValue={initial[field.name] ?? field.defaultValue}
+                      placeholder={field.placeholder}
+                      rows={7}
+                    />
+                  ) : (
+                    <input
+                      name={field.name}
+                      type={
+                        field.type === "list" ? "text" : field.type || "text"
                       }
-                    >
-                      <option value="">
-                        Select {field.label.toLowerCase()}
-                      </option>
-                      {field.options.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown size={15} />
-                  </div>
-                ) : field.type === "textarea" ? (
-                  <textarea
-                    name={field.name}
-                    required={field.required !== false}
-                    defaultValue={initial[field.name] ?? field.defaultValue}
-                    placeholder={field.placeholder}
-                    rows={7}
-                  />
-                ) : (
-                  <input
-                    name={field.name}
-                    type={field.type || "text"}
-                    required={field.required !== false}
-                    defaultValue={initial[field.name] ?? field.defaultValue}
-                    placeholder={field.placeholder}
-                    min={field.min}
-                    max={field.max}
-                    step={field.step}
-                    minLength={
-                      field.type === "password" && field.name === "password"
-                        ? 12
-                        : undefined
+                      required={field.required !== false}
+                      defaultValue={
+                        Array.isArray(initial[field.name])
+                          ? initial[field.name].join(", ")
+                          : (initial[field.name] ?? field.defaultValue)
+                      }
+                      placeholder={field.placeholder}
+                      min={field.min}
+                      max={field.max}
+                      step={field.step}
+                      minLength={
+                        field.type === "password" && field.name === "password"
+                          ? 12
+                          : undefined
+                      }
+                      maxLength={
+                        field.type === "password" && field.name === "password"
+                          ? 128
+                          : undefined
+                      }
+                      autoComplete={
+                        field.autoComplete ||
+                        (field.type === "password" ? "new-password" : "off")
+                      }
+                    />
+                  )}
+                </>
+              )}
+              {field.source && (
+                <>
+                  <button
+                    type="button"
+                    className="text-button"
+                    disabled={
+                      (!field.source.hasMore && !field.source.error) ||
+                      field.source.loading
                     }
-                    maxLength={
-                      field.type === "password" && field.name === "password"
-                        ? 128
-                        : undefined
-                    }
-                    autoComplete={
-                      field.autoComplete ||
-                      (field.type === "password" ? "new-password" : "off")
-                    }
-                  />
-                )}
-              </>
-            )}
-            {field.source && (
-              <>
-                <button
-                  type="button"
-                  className="text-button"
-                  disabled={
-                    (!field.source.hasMore && !field.source.error) ||
-                    field.source.loading
-                  }
-                  onClick={field.source.loadMore}
-                >
-                  {field.source.loading
-                    ? "Loading choices�"
-                    : field.source.error
-                      ? "Retry choices"
-                      : field.source.hasMore
-                        ? "Load more choices"
-                        : "All choices loaded"}
-                </button>
-                {field.source.error && (
-                  <small role="alert" className="danger">
-                    {field.source.error.message}
-                  </small>
-                )}
-              </>
-            )}
-            {field.help && <small>{field.help}</small>}
-          </label>
-        ))}
+                    onClick={field.source.loadMore}
+                  >
+                    {field.source.loading
+                      ? "Loading choices…"
+                      : field.source.error
+                        ? "Retry choices"
+                        : field.source.hasMore
+                          ? "Load more choices"
+                          : "All choices loaded"}
+                  </button>
+                  {field.source.error && (
+                    <small role="alert" className="danger">
+                      {field.source.error.message}
+                    </small>
+                  )}
+                </>
+              )}
+              {field.help && <small>{field.help}</small>}
+            </label>
+          ),
+        )}
       </div>
       {children}
       {error && <ErrorBox error={error} />}

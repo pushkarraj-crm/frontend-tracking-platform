@@ -49,11 +49,13 @@ export function ResourceRows({
   version = 0,
   actions,
   columns,
+  renderers = {},
 }: {
   path: string | null;
   version?: number;
   actions?: (r: Row) => ReactNode;
   columns?: string[];
+  renderers?: Record<string, (row: Row) => ReactNode>;
 }) {
   const [offset, setOffset] = useState(0);
   const paginated = Boolean(
@@ -96,10 +98,14 @@ export function ResourceRows({
         ...keys.map((key) => ({
           key,
           title: key.replaceAll("_", " "),
-          render: (r: Row) =>
-            typeof r[key] === "object"
-              ? JSON.stringify(r[key])
-              : String(r[key] ?? "—"),
+          render:
+            renderers[key] ||
+            ((r: Row) =>
+              r[key] == null
+                ? "—"
+                : typeof r[key] === "object"
+                  ? JSON.stringify(r[key])
+                  : String(r[key] ?? "—")),
         })),
         ...(actions
           ? [{ key: "actions", title: "Actions", render: actions }]
@@ -116,6 +122,8 @@ export function ResourceEditor({
   readOnly = false,
   initial,
   columns,
+  renderers,
+  editable = false,
 }: {
   path: string;
   title: string;
@@ -124,6 +132,8 @@ export function ResourceEditor({
   readOnly?: boolean;
   initial?: Row;
   columns?: string[];
+  renderers?: Record<string, (row: Row) => ReactNode>;
+  editable?: boolean;
 }) {
   const [version, setVersion] = useState(0),
     [open, setOpen] = useState(false),
@@ -152,7 +162,7 @@ export function ResourceEditor({
             fields={fields}
             key={editing?.id || "new"}
             initial={editing || initial}
-            submit={editing ? "Update event" : "Create"}
+            submit={editing ? "Save changes" : "Create"}
             onSubmit={async (body) => {
               await send(
                 editing ? `${path}/${editing.id}` : path,
@@ -171,6 +181,7 @@ export function ResourceEditor({
         path={path}
         version={version}
         columns={columns}
+        renderers={renderers}
         actions={
           readOnly
             ? undefined
@@ -179,13 +190,13 @@ export function ResourceEditor({
                   <>
                     <button
                       className="button secondary"
-                      hidden={!path.endsWith("/events")}
+                      hidden={!editable && !path.endsWith("/events")}
                       onClick={() => {
                         setEditing(r);
                         setOpen(true);
                       }}
                     >
-                      Edit event
+                      Edit
                     </button>
                     <Action
                       run={async () => {
@@ -224,6 +235,7 @@ export function RequestForm({
   method = "POST",
   transform,
   initial,
+  successMessage,
 }: {
   title: string;
   path: string;
@@ -231,6 +243,7 @@ export function RequestForm({
   method?: string;
   transform?: (b: Row) => Row;
   initial?: Row;
+  successMessage?: string;
 }) {
   const [result, setResult] = useState<unknown>(null);
   return (
@@ -240,6 +253,7 @@ export function RequestForm({
           fields={fields}
           initial={initial}
           onSubmit={async (b) => {
+            setResult(null);
             setResult(
               await api(path, {
                 method,
@@ -248,7 +262,14 @@ export function RequestForm({
             );
           }}
         />
-        {result !== null && <Result value={result} />}
+        {result !== null &&
+          (successMessage ? (
+            <p role="status" className="notice">
+              {successMessage}
+            </p>
+          ) : (
+            <Result value={result} />
+          ))}
       </div>
     </Panel>
   );

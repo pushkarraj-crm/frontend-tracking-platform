@@ -66,30 +66,6 @@ import {
 const currentYear = new Date().getFullYear();
 const navigation = [
   {
-    path: "/campaign-operations",
-    label: "Campaign operations",
-    icon: Tag,
-    roles: ["admin", "staff", "advertiser", "publisher", "affiliate"],
-  },
-  {
-    path: "/network",
-    label: "Network settings",
-    icon: Settings2,
-    roles: ["admin", "staff", "advertiser", "publisher", "affiliate"],
-  },
-  {
-    path: "/tools",
-    label: "Network tools",
-    icon: Network,
-    roles: ["admin", "staff", "advertiser", "publisher", "affiliate"],
-  },
-  {
-    path: "/callbacks",
-    label: "Publisher callbacks",
-    icon: Network,
-    roles: ["admin", "staff", "publisher", "affiliate"],
-  },
-  {
     path: "/",
     label: "Overview",
     icon: LayoutDashboard,
@@ -102,22 +78,10 @@ const navigation = [
     roles: ["admin", "staff", "affiliate", "publisher", "advertiser"],
   },
   {
-    path: "/partners",
-    label: "Partners",
-    icon: Users,
-    roles: ["admin", "staff", "affiliate"],
-  },
-  {
-    path: "/links",
-    label: "Tracking links",
-    icon: Link2,
-    roles: ["admin", "staff", "affiliate", "publisher"],
-  },
-  {
-    path: "/conversions",
-    label: "Conversions",
-    icon: ArrowDownLeft,
-    roles: ["admin", "staff", "affiliate", "publisher", "advertiser"],
+    path: "/campaign-operations",
+    label: "Campaign workspace",
+    icon: Tag,
+    roles: ["admin", "staff", "advertiser", "publisher", "affiliate"],
   },
   {
     path: "/reports",
@@ -126,22 +90,16 @@ const navigation = [
     roles: ["admin", "staff", "affiliate", "publisher", "advertiser"],
   },
   {
-    path: "/payouts",
-    label: "Publisher invoices",
-    icon: ReceiptText,
-    roles: ["admin", "staff", "publisher", "advertiser"],
+    path: "/conversions",
+    label: "Conversions",
+    icon: ArrowDownLeft,
+    roles: ["admin", "staff", "affiliate", "publisher", "advertiser"],
   },
   {
-    path: "/fraud",
-    label: "Fraud protection",
-    icon: ShieldCheck,
-    roles: ["admin", "staff"],
-  },
-  {
-    path: "/domains",
-    label: "Advertiser domains",
-    icon: Globe2,
-    roles: ["admin", "staff", "advertiser"],
+    path: "/partners",
+    label: "Partners",
+    icon: Users,
+    roles: ["admin", "staff", "affiliate"],
   },
   {
     path: "/applications",
@@ -150,16 +108,58 @@ const navigation = [
     roles: ["admin", "staff", "advertiser", "publisher"],
   },
   {
+    path: "/fraud",
+    label: "Fraud protection",
+    icon: ShieldCheck,
+    roles: ["admin", "staff"],
+  },
+  {
+    path: "/links",
+    label: "Tracking links",
+    icon: Link2,
+    roles: ["admin", "staff", "affiliate", "publisher"],
+  },
+  {
     path: "/postbacks",
     label: "S2S postbacks",
     icon: Network,
     roles: ["admin", "staff", "advertiser", "publisher"],
   },
   {
+    path: "/callbacks",
+    label: "Publisher callbacks",
+    icon: Network,
+    roles: ["admin", "staff", "publisher", "affiliate"],
+  },
+  {
+    path: "/tools",
+    label: "Network tools",
+    icon: Network,
+    roles: ["admin", "staff", "advertiser", "publisher", "affiliate"],
+  },
+  {
+    path: "/payouts",
+    label: "Publisher invoices",
+    icon: ReceiptText,
+    roles: ["admin", "staff", "publisher", "advertiser"],
+  },
+  {
     path: "/billing",
     label: "Plan & billing",
     icon: ReceiptText,
     roles: ["admin"],
+  },
+  {
+    path: "/domains",
+    label: "Advertiser domains",
+    icon: Globe2,
+    roles: ["admin", "staff", "advertiser"],
+  },
+  {
+    path: "/network",
+    label: "Network settings",
+    icon: Settings2,
+    roles: ["admin", "staff", "advertiser", "publisher", "affiliate"],
   },
   {
     path: "/settings",
@@ -414,10 +414,7 @@ export default function App() {
           </div>
         )}
         <Routes>
-          <Route
-            path="/login"
-            element={<LoginGate />}
-          />
+          <Route path="/login" element={<LoginGate />} />
           <Route
             path="/register"
             element={

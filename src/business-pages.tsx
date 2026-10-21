@@ -1,3 +1,4 @@
+import { CampaignCreate } from "./campaign-create";
 import { CampaignRules } from "./campaign-rules";
 import { useState, type ReactNode } from "react";
 import { api, send, type Row } from "./api";
@@ -138,6 +139,7 @@ export function Campaigns() {
     [offset, setOffset] = useState(0),
     [open, setOpen] = useState(false),
     [rulesCampaign, setRulesCampaign] = useState<Row | null>(null),
+    [cloneCampaign, setCloneCampaign] = useState<Row | null>(null),
     [secret, setSecret] = useState(""),
     [linkCampaign, setLinkCampaign] = useState<Row | null>(null);
   const result = useData<Row[]>(
@@ -145,7 +147,7 @@ export function Campaigns() {
       version,
     ),
     users = useCatalog(open && staff(user.role) ? "/users" : null);
-  const manage = staff(user.role) || user.role === "advertiser";
+  const manage = user.role === "advertiser" || (staff(user.role) && (user.staff_permissions == null || user.staff_permissions.includes("campaigns:write")));
   return (
     <>
       <PageHead
@@ -164,6 +166,23 @@ export function Campaigns() {
           campaign={rulesCampaign}
           close={() => setRulesCampaign(null)}
         />
+      )}
+      {cloneCampaign && (
+        <Modal title="Clone campaign" onClose={() => setCloneCampaign(null)}>
+          <p>The copy starts paused with a new S2S key. Publisher approvals, traffic and payment history are not copied.</p>
+          <Fields
+            fields={[{ name: "name", label: "New campaign name", defaultValue: `${cloneCampaign.name} copy` }]}
+            submit="Create paused copy"
+            onSubmit={async (body) => {
+              const created = await send<Row>(`/campaigns/${cloneCampaign.id}/clone`, body);
+              setSecret(created.postback_key);
+              setCloneCampaign(null);
+              setOffset(0);
+              setVersion((v) => v + 1);
+              toast("Campaign copied. Review its settings before activation.");
+            }}
+          />
+        </Modal>
       )}
       {secret && <Secret title="Advertiser postback key" value={secret} />}{" "}
       {linkCampaign && (
@@ -187,7 +206,7 @@ export function Campaigns() {
                 title: "Campaign",
                 render: (r) => (
                   <>
-                    <strong>{r.name}</strong>
+                    <a className="campaign-title-link" href={`/campaign-operations?campaign=${encodeURIComponent(r.id)}`}><strong>{r.name}</strong></a>
                     <p>{r.description}</p>
                   </>
                 ),
@@ -246,6 +265,7 @@ export function Campaigns() {
                       >
                         Rotate S2S key
                       </Action>
+                      <button className="button secondary" onClick={() => setCloneCampaign(r)}>Clone campaign</button>
                       <button
                         className="button secondary"
                         onClick={() => setRulesCampaign(r)}
@@ -281,82 +301,13 @@ export function Campaigns() {
         </Resource>
       </Panel>
       {open && (
-        <Modal
-          title="Create advertiser campaign"
-          onClose={() => setOpen(false)}
-        >
-          <Fields
-            fields={[
-              { name: "name", label: "Campaign name" },
-              {
-                name: "campaign_model",
-                label: "Commission model",
-                options: [
-                  { value: "CPL", label: "CPL — fixed lead commission" },
-                  { value: "CPS", label: "CPS — percentage of sale" },
-                ],
-              },
-              ...(staff(user.role)
-                ? [
-                    {
-                      name: "advertiser_id",
-                      label: "Advertiser",
-                      options: options(
-                        users.data.filter(
-                          (r) => r.role === "advertiser" && r.active,
-                        ),
-                      ),
-                      source: users,
-                    },
-                  ]
-                : []),
-              {
-                name: "destination_url",
-                label: "Final advertiser URL",
-                type: "url",
-                help: "Use the stable HTTPS destination shown to visitors and ad reviewers.",
-                full: true,
-              },
-              {
-                name: "payout",
-                label: "CPL commission",
-                type: "number",
-                min: 0,
-                step: "0.0001",
-                defaultValue: 0,
-                help: "For CPS enter 0; the sale percentage determines commission.",
-              },
-              {
-                name: "sale_percentage",
-                label: "CPS percentage",
-                type: "number",
-                min: 0.0001,
-                max: 100,
-                step: "0.0001",
-                required: false,
-                help: "Required only for CPS. Leave empty for CPL.",
-              },
-              { name: "currency", label: "Currency", defaultValue: "USD" },
-              {
-                name: "description",
-                label: "Campaign details and restrictions",
-                type: "textarea",
-                required: false,
-                full: true,
-              },
-            ]}
-            submit="Create campaign"
-            onSubmit={async (b) => {
-              const v = await send<Row>("/campaigns", {
-                ...b,
-                revenue: b.payout,
-              });
-              setSecret(v.postback_key);
-              setOpen(false);
-              setVersion((v) => v + 1);
-            }}
-          />
-        </Modal>
+        <CampaignCreate users={users} role={user.role} close={() => setOpen(false)} created={(campaign) => {
+          setSecret(campaign.postback_key);
+          setOpen(false);
+          setOffset(0);
+          setVersion((v) => v + 1);
+          toast("Campaign created. Targeting and publisher access settings are saved.");
+        }} />
       )}
     </>
   );

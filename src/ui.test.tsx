@@ -91,3 +91,63 @@ it("keeps pagination available while filtering the current page", () => {
   );
   expect(screen.getByRole("button", { name: "Next page" })).toBeEnabled();
 });
+
+it("preserves selected publishers that are outside the loaded dropdown page", async () => {
+  const submit = vi.fn().mockResolvedValue(undefined);
+  render(
+    <Fields
+      fields={[
+        {
+          name: "publisher_ids",
+          label: "Publishers",
+          type: "multiselect",
+          required: false,
+          options: [{ value: "loaded", label: "Loaded publisher" }],
+        },
+      ]}
+      initial={{ publisher_ids: ["outside-page"] }}
+      onSubmit={submit}
+    />,
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+  expect(submit).toHaveBeenCalledWith({ publisher_ids: ["outside-page"] });
+});
+
+it("only submits the commission inputs for the selected pricing model", async () => {
+  const submit = vi.fn().mockResolvedValue(undefined);
+  render(
+    <Fields
+      fields={[
+        {
+          name: "model",
+          label: "Pricing",
+          defaultValue: "CPS",
+          options: [
+            { value: "CPL", label: "Lead" },
+            { value: "CPS", label: "Sale" },
+          ],
+        },
+        {
+          name: "payout",
+          label: "Payout",
+          defaultValue: "5",
+          type: "number",
+          showWhen: { name: "model", value: "CPL" },
+        },
+        {
+          name: "sale_percentage",
+          label: "Percentage",
+          defaultValue: "10",
+          type: "number",
+          showWhen: { name: "model", value: "CPS" },
+        },
+      ]}
+      onSubmit={submit}
+    />,
+  );
+  expect(screen.queryByLabelText(/Payout/)).not.toBeInTheDocument();
+  await userEvent.selectOptions(screen.getByLabelText(/Pricing/), "CPL");
+  expect(screen.queryByLabelText(/Percentage/)).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+  expect(submit).toHaveBeenCalledWith({ model: "CPL", payout: "5" });
+});

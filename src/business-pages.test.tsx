@@ -125,3 +125,39 @@ it("publishers apply to campaigns and cannot create campaigns or rotate advertis
     screen.queryByRole("button", { name: "Rotate S2S key" }),
   ).not.toBeInTheDocument();
 });
+
+it("advertisers clone into a paused campaign and receive the new key", async () => {
+  const fetcher = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    const path = String(input);
+    return new Response(JSON.stringify(path.endsWith("/clone")
+      ? { id: "copy", active: false, postback_key: "new-secret-key" }
+      : [{ id: "original", name: "Original campaign", campaign_model: "CPL", payout: "5", currency: "INR", active: true, postback_url: "/postbacks/original" }]), { status: 200 });
+  });
+  portal("advertiser", <Campaigns />);
+  await userEvent.click(await screen.findByRole("button", { name: "Clone campaign" }));
+  expect(screen.getByLabelText(/New campaign name/)).toHaveValue("Original campaign copy");
+  await userEvent.click(screen.getByRole("button", { name: "Create paused copy" }));
+  expect(await screen.findByText("new-secret-key")).toBeInTheDocument();
+  expect(fetcher).toHaveBeenCalledWith(expect.stringContaining("/campaigns/original/clone"), expect.objectContaining({ method: "POST", body: JSON.stringify({ name: "Original campaign copy" }) }));
+});
+it("creates a campaign with independent pricing, targeting and access settings", async () => {
+  const fetcher = vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) =>
+    new Response(JSON.stringify(init?.method === "POST" ? { id: "new", postback_key: "created-key" } : []), { status: 200 }));
+  portal("advertiser", <Campaigns />);
+  await userEvent.click(screen.getByRole("button", { name: "Create campaign" }));
+  await userEvent.type(screen.getByLabelText("Campaign name"), "Demo campaign");
+  await userEvent.type(screen.getByLabelText(/Final advertiser URL/), "https://brand.example/offer");
+  await userEvent.clear(screen.getByLabelText(/Advertiser revenue/));
+  await userEvent.type(screen.getByLabelText(/Advertiser revenue/), "10");
+  await userEvent.clear(screen.getByLabelText("Publisher payout"));
+  await userEvent.type(screen.getByLabelText("Publisher payout"), "5");
+  await userEvent.type(screen.getByLabelText(/Geo coverage/), "in, us");
+  await userEvent.type(screen.getByLabelText(/Categories/), "Ecommerce");
+  await userEvent.selectOptions(screen.getByLabelText("Visibility"), "open");
+  await userEvent.selectOptions(screen.getByLabelText("Status"), "paused");
+  await userEvent.click(screen.getAllByRole("button", { name: "Create campaign" }).at(-1)!);
+  expect(await screen.findByText("created-key")).toBeVisible();
+  const call = fetcher.mock.calls.find(([, init]) => init?.method === "POST");
+  expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({ revenue: "10", payout: "5", active: false,
+    settings: { visibility: "open", categories: ["Ecommerce"] }, tracking_rules: { countries: ["IN", "US"] } });
+});

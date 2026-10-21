@@ -44,3 +44,17 @@ export function parseJson(body: Row, names: string[]) {
     }
   return result;
 }
+
+export const conditionOperators: Record<string, string> = {
+  eq: "equals",
+  ne: "does not equal",
+  in: "is one of",
+  not_in: "is not one of",
+  contains: "contains",
+  not_contains: "does not contain",
+  is_empty: "is empty",
+  not_empty: "is not empty",
+  gt: "is greater than",
+  lt: "is less than",
+  between: "is between",
+};

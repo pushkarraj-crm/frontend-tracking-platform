@@ -2255,3 +2255,60 @@ body:has(.stage-banner) .sidebar {
   font-size: 13px;
   line-height: 1.6;
 }
+
+.campaign-create fieldset {
+  border: 1px solid #d5dfd8;
+  border-radius: 10px;
+  padding: 20px;
+  margin: 20px 0;
+  min-width: 0;
+}
+.campaign-create legend { padding: 0 8px; font-weight: 700; }
+.campaign-create small { display: block; margin-top: 6px; color: #61745f; line-height: 1.5; }
+.campaign-create select { display: block; width: 100%; padding: 12px; margin-top: 8px; border: 1px solid #d5dfd8; border-radius: 8px; background: white; color: #274d3e; }
+.campaign-create-actions { display: flex; justify-content: flex-end; gap: 12px; position: sticky; bottom: 0; background: white; padding: 16px 0; }
+
+/* Campaign workspace */
+.campaign-title-link { color: inherit; text-decoration: underline; text-decoration-color: #a5bdb0; text-underline-offset: 4px; }
+.campaign-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 24px 0; }
+.campaign-summary-grid article { border: 1px solid #d5dfd8; border-radius: 12px; padding: 20px; background: white; display: flex; flex-direction: column; gap: 12px; overflow-wrap: anywhere; }
+.campaign-summary-grid article > span:first-child { color: #61745f; font-size: 13px; }
+.campaign-workspace-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.workspace-content { padding: 24px; overflow-wrap: anywhere; }
+.workspace-content > .button { margin: 8px 8px 8px 0; }
+.campaign-details { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 16px; margin-top: 24px; }
+.campaign-details dt { color: #61745f; }
+.campaign-details dd { margin: 0; }
+.preserve-lines { white-space: pre-wrap; }
+.campaign-checklist { padding-left: 20px; margin: 0; }
+.campaign-checklist li { margin-bottom: 24px; padding-left: 8px; }
+.campaign-checklist p { margin: 6px 0; color: #61745f; }
+.campaign-checklist .text-button { display: inline-block; margin-right: 12px; }
+.condition-field { border: 1px solid #d5dfd8; border-radius: 10px; min-width: 0; padding: 16px; }
+.condition-builder > p { font-weight: 400; color: #61745f; }
+.condition-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr) auto; gap: 12px; border: 1px solid #d5dfd8; border-radius: 8px; padding: 16px; margin-bottom: 16px; align-items: start; min-width: 0; }
+.condition-row legend { font-size: 12px; padding: 0 8px; }
+.condition-row label { min-width: 0; }
+.condition-row > button { align-self: center; }
+.condition-row small { display: block; color: #61745f; margin-top: 6px; font-weight: 400; }
+.condition-row select { width: 100%; padding: 12px; border: 1px solid #d5dfd8; border-radius: 8px; background: white; margin-top: 8px; color: inherit; }
+.cap-usage { min-width: 150px; display: grid; gap: 6px; }
+.cap-usage progress { width: 100%; height: 8px; accent-color: #287852; }
+.cap-usage small { color: #61745f; }
+.cap-warning progress { accent-color: #b87513; }
+.cap-full progress { accent-color: #b53f3f; }
+.cap-full > small { color: #b53f3f; }
+@media (max-width: 1100px) { .campaign-workspace-grid { grid-template-columns: 1fr; } .condition-row { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 650px) { .campaign-summary-grid { grid-template-columns: 1fr 1fr; gap: 10px; } .condition-row { grid-template-columns: 1fr; } .campaign-details { grid-template-columns: 1fr; gap: 8px; } .campaign-details dd { margin-bottom: 12px; } .workspace-content { padding: 16px; } }
+.report-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; padding: 16px 24px; border-bottom: 1px solid #d5dfd8; }
+.report-toolbar summary, .report-advanced summary { cursor: pointer; font-weight: 600; }
+.report-toolbar label { display: flex; gap: 8px; align-items: center; }
+.report-column-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding-top: 16px; }
+.report-advanced { grid-column: 1 / -1; }
+.report-advanced > .form-grid { padding-top: 16px; }
+@media (max-width: 650px) { .report-column-options { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 650px) {
+  .network-form .form-grid { grid-template-columns: minmax(0, 1fr); }
+  .network-tabs { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 8px; }
+  .network-tabs .button { flex-shrink: 0; }
+}

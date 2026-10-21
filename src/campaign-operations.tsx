@@ -1,3 +1,8 @@
+import {
+  CampaignOverview,
+  CampaignTargeting,
+  CapUsage,
+} from "./campaign-workspace";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, type Row } from "./api";
@@ -11,20 +16,25 @@ import {
   ResourceRows,
   Result,
 } from "./network-ui";
-import { text, select, json, money, parseJson } from "./network-fields";
-const conditions = json(
-  "conditions",
-  "Conditions",
-  { all: [] },
-  'All conditions must match. Example: {"all":[{"field":"source","operator":"eq","value":"google"}]}. Operators: eq, ne, in, not_in, contains, gt, lt, between, is_empty, not_empty.',
-);
+import {
+  text,
+  select,
+  json,
+  money,
+  parseJson,
+  conditionOperators,
+} from "./network-fields";
+const conditions = text("conditions", "Conditions", {
+  type: "conditions",
+  full: true,
+});
 const name = text("name", "Name");
 export function CampaignOperations() {
   const { user } = useSession(),
     [params, setParams] = useSearchParams(),
     campaigns = useCatalog("/campaigns");
   const id = params.get("campaign") || "",
-    tab = params.get("tab") || "profile",
+    requestedTab = params.get("tab") || "overview",
     manage =
       user.role === "advertiser" ||
       (staff(user.role) &&
@@ -32,7 +42,9 @@ export function CampaignOperations() {
           user.staff_permissions.includes("campaigns:write")));
   const tabs = manage
     ? [
+        "overview",
         "profile",
+        "targeting",
         "events",
         "commission-rules",
         "caps",
@@ -42,7 +54,21 @@ export function CampaignOperations() {
         "assign",
         "url-preview",
       ]
-    : ["profile", "events", "commission-rules", "creatives"];
+    : ["overview", "profile", "events", "commission-rules", "creatives"];
+  const tab = tabs.includes(requestedTab) ? requestedTab : "overview";
+  const labels: Record<string, string> = {
+    overview: "Overview",
+    profile: "General",
+    targeting: "Targeting and fraud",
+    events: "Events",
+    "commission-rules": "Payout rules",
+    caps: "Caps",
+    destinations: "Landing pages",
+    creatives: "Creatives",
+    "traffic-rules": "Traffic rules",
+    assign: "Publishers",
+    "url-preview": "Test destination",
+  };
   const campaign = campaigns.data.find((c) => c.id === id);
   const users = useCatalog(manage && id ? "/users" : null);
   const publisher: Field = {
@@ -73,13 +99,17 @@ export function CampaignOperations() {
       }),
       name,
       select("model", "Pricing", ["CPL", "CPS"], { defaultValue: "CPL" }),
-      money("payout", "Publisher payout"),
+      {
+        ...money("payout", "Publisher payout"),
+        showWhen: { name: "model", value: "CPL" },
+      },
       money("revenue", "Revenue"),
       text("sale_percentage", "Sale percentage (CPS only)", {
         type: "number",
         step: "0.0001",
-        required: false,
-        min: 0,
+        required: true,
+        showWhen: { name: "model", value: "CPS" },
+        min: 0.0001,
         max: 100,
       }),
       text("repeatable", "Allow multiple transactions per click", {
@@ -107,12 +137,18 @@ export function CampaignOperations() {
         defaultValue: 100,
       }),
       select("model", "Pricing", ["CPL", "CPS"], { defaultValue: "CPL" }),
-      money("payout", "Publisher payout"),
+      {
+        ...money("payout", "Publisher payout"),
+        showWhen: { name: "model", value: "CPL" },
+      },
       money("revenue", "Revenue"),
       text("sale_percentage", "CPS percentage", {
         type: "number",
         step: "0.0001",
-        required: false,
+        min: 0.0001,
+        max: 100,
+        required: true,
+        showWhen: { name: "model", value: "CPS" },
       }),
       conditions,
       text("visible_to_publishers", "Visible to publishers", {
@@ -141,27 +177,33 @@ export function CampaignOperations() {
         defaultValue: "UTC",
         help: "IANA timezone, e.g. Asia/Kolkata",
       }),
-      text("amount", "Maximum", { type: "number", min: 1, step: "0.0001" }),
+      text("amount", "Maximum", {
+        type: "number",
+        min: 0.0001,
+        step: "0.0001",
+        help: "Counts must be whole numbers. When editing, only the name and maximum can change; create a new cap for a different scope or period.",
+      }),
     ];
   if (tab === "destinations") {
     fields = [
       name,
       text("url", "HTTPS landing URL", { type: "url" }),
       text("weight", "Weight", { type: "number", min: 1, defaultValue: 1 }),
-      json(
-        "countries",
-        "Countries",
-        [],
-        "ISO country codes; [] means every country.",
-      ),
-      json(
-        "publisher_ids",
-        "Publisher restrictions",
-        [],
-        "Publisher IDs; [] means every approved publisher.",
-      ),
+      text("countries", "Countries", {
+        type: "list",
+        uppercase: true,
+        required: false,
+        help: "Country codes separated by commas, e.g. IN, US. Leave empty for all countries.",
+      }),
+      {
+        ...publisher,
+        name: "publisher_ids",
+        label: "Restrict to publishers",
+        type: "multiselect",
+        help: "Leave unselected for all approved publishers. Use Ctrl or Command to select several.",
+      },
     ];
-    jsonFields = ["countries", "publisher_ids"];
+    jsonFields = [];
   }
   if (tab === "creatives")
     fields = [
@@ -183,8 +225,13 @@ export function CampaignOperations() {
       select("phase", "Apply at", ["click", "conversion"], {
         defaultValue: "click",
       }),
-      select("action", "Action", ["allow", "reject", "pending", "approve"], {
-        help: "Clicks: allow/reject. Conversions: pending/approve/reject.",
+      select("action", "Action", ["allow", "reject"], {
+        defaultValue: "reject",
+        showWhen: { name: "phase", value: "click" },
+      }),
+      select("action", "Action", ["pending", "approve", "reject"], {
+        defaultValue: "reject",
+        showWhen: { name: "phase", value: "conversion" },
       }),
       conditions,
     ];
@@ -193,8 +240,8 @@ export function CampaignOperations() {
   return (
     <>
       <PageHead
-        title="Campaign operations"
-        description="Events, publisher rates, caps, landing variants and creative assets."
+        title={campaign?.name || "Campaign workspace"}
+        description="Manage setup, publisher access, traffic quality and payouts in one place."
       />
       <Panel title="Select a campaign">
         <div className="network-form">
@@ -214,10 +261,12 @@ export function CampaignOperations() {
           </label>
           <button
             className="text-button"
-            disabled={!campaigns.hasMore || campaigns.loading}
+            disabled={
+              (!campaigns.hasMore && !campaigns.error) || campaigns.loading
+            }
             onClick={campaigns.loadMore}
           >
-            Load more campaigns
+            {campaigns.error ? "Retry campaigns" : "Load more campaigns"}
           </button>
           {campaigns.error && <ErrorBox error={campaigns.error} />}
         </div>
@@ -229,17 +278,29 @@ export function CampaignOperations() {
               <button
                 className={tab === t ? "button primary" : "button secondary"}
                 key={t}
+                aria-current={tab === t ? "page" : undefined}
                 onClick={() => choose("tab", t)}
               >
-                {t.replaceAll("-", " ")}
+                {labels[t]}
               </button>
             ))}
           </nav>
+          {tab === "overview" && (
+            <CampaignOverview
+              key={id}
+              id={id}
+              manage={manage}
+              choose={(tab) => choose("tab", tab)}
+            />
+          )}
+          {tab === "targeting" && manage && (
+            <CampaignTargeting key={id} id={id} />
+          )}
           {tab === "profile" && <Profile key={id} id={id} manage={manage} />}
           {fields.length > 0 && (
             <ResourceEditor
               key={id + tab}
-              title={tab.replaceAll("-", " ")}
+              title={labels[tab]}
               path={`/campaigns/${id}/${tab}`}
               fields={fields}
               jsonFields={jsonFields}
@@ -252,7 +313,7 @@ export function CampaignOperations() {
                       "payout",
                       ...(manage ? ["revenue"] : []),
                       "repeatable",
-                      "auto_approve",
+                      ...(manage ? ["auto_approve"] : []),
                       "active",
                     ]
                   : tab === "caps"
@@ -265,8 +326,80 @@ export function CampaignOperations() {
                         "recorded_usage",
                         "active",
                       ]
-                    : undefined
+                    : tab === "commission-rules"
+                      ? [
+                          "name",
+                          "publisher_id",
+                          "event_key",
+                          "model",
+                          "payout",
+                          ...(manage ? ["revenue"] : []),
+                          "sale_percentage",
+                          "conditions",
+                          "priority",
+                          "active",
+                        ]
+                      : tab === "destinations"
+                        ? [
+                            "name",
+                            "url",
+                            "weight",
+                            "countries",
+                            "publisher_ids",
+                            "active",
+                          ]
+                        : tab === "creatives"
+                          ? ["name", "kind", "url", "description", "active"]
+                          : tab === "traffic-rules"
+                            ? [
+                                "name",
+                                "phase",
+                                "action",
+                                "conditions",
+                                "priority",
+                                "active",
+                              ]
+                            : undefined
               }
+              editable
+              renderers={{
+                event_key: (row) => row.event_key || "All events",
+                payout: (row) =>
+                  row.model === "CPS"
+                    ? `${row.sale_percentage}% of sale`
+                    : `${row.payout} ${campaign?.currency || ""}`,
+                revenue: (row) => `${row.revenue} ${campaign?.currency || ""}`,
+                recorded_usage: (row) => <CapUsage row={row} />,
+                conditions: (row) => (
+                  <span>
+                    {row.conditions?.all?.length
+                      ? row.conditions.all
+                          .map(
+                            (c: Row) =>
+                              `${c.field.replaceAll("_", " ")} ${conditionOperators[c.operator] || c.operator} ${Array.isArray(c.value) ? c.value.join(", ") : c.value}`,
+                          )
+                          .join(" AND ")
+                      : "All traffic"}
+                  </span>
+                ),
+                countries: (row) =>
+                  row.countries?.length
+                    ? row.countries.join(", ")
+                    : "All countries",
+                publisher_ids: (row) =>
+                  row.publisher_ids?.length
+                    ? row.publisher_ids
+                        .map(
+                          (id: string) =>
+                            users.data.find((u) => u.id === id)?.email || id,
+                        )
+                        .join(", ")
+                    : "All approved publishers",
+                publisher_id: (row) =>
+                  users.data.find((u) => u.id === row.publisher_id)?.email ||
+                  row.publisher_id ||
+                  "All publishers",
+              }}
               readOnly={!manage}
             />
           )}
@@ -329,6 +462,7 @@ function Profile({ id, manage }: { id: string; manage: boolean }) {
   return (
     <RequestForm
       title="Campaign profile"
+      successMessage="Campaign details saved."
       path={`/campaigns/${id}/profile`}
       method="PUT"
       initial={{
@@ -384,6 +518,12 @@ function Profile({ id, manage }: { id: string; manage: boolean }) {
           "Automatically approve initial conversions",
           { type: "checkbox", required: false },
         ),
+        text("cap_alert_percent", "Cap notification threshold (%)", {
+          type: "number",
+          min: 1,
+          max: 100,
+          help: "Notify when a cap crosses this percentage of its limit.",
+        }),
         text("fallback_url", "Unavailable-campaign fallback URL", {
           type: "url",
           required: false,

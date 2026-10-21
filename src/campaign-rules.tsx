@@ -11,7 +11,7 @@ export function CampaignRules({
 }) {
   const result = useData<Row>(`/offers/${campaign.id}/rules`);
   return (
-    <Modal title={`Targeting and caps � ${campaign.name}`} onClose={close}>
+    <Modal title={`Targeting and caps — ${campaign.name}`} onClose={close}>
       {result.error ? (
         <ErrorBox error={result.error} />
       ) : result.loading ? (

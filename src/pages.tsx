@@ -1,3 +1,4 @@
+import { ReportComparison } from "./report-comparison";
 import { campaignRuleFields } from "./campaign-rule-fields";
 import { useData, useCatalog } from "./hooks";
 import { money, date, short } from "./format";
@@ -1249,6 +1250,14 @@ export function Conversions() {
   );
 }
 export function Reports() {
+  const { user } = useSession();
+  const canBrowseCampaigns =
+    user.role !== "staff" ||
+    user.staff_permissions == null ||
+    user.staff_permissions.includes("campaigns:read");
+  const campaigns = useCatalog(canBrowseCampaigns ? "/campaigns" : null);
+  const [compare, setCompare] = useState(false);
+  const [hidden, setHidden] = useState<Record<string, string[]>>({});
   const toast = useToast(),
     [version, reload] = useReload(),
     [offset, setOffset] = useState(0),
@@ -1269,11 +1278,18 @@ export function Reports() {
         ? new Date(applied.start + "T00:00:00Z").toISOString()
         : undefined,
       end: applied.end
-        ? new Date(applied.end + "T23:59:59.999Z").toISOString()
+        ? new Date(
+            new Date(applied.end + "T00:00:00Z").getTime() + 86400000,
+          ).toISOString()
         : undefined,
       ...(dataset === "grouped" ? { limit: 1000 } : { offset, limit: size }),
     }),
     result = useData<Row[]>(`/reports/${dataset}?${params}`, version);
+  const columnKeys = result.data?.length
+    ? Object.keys(result.data[0])
+    : dataset === "grouped"
+      ? ["group", "currency", "clicks", "conversions", "approved_conversions"]
+      : ["id", "offer_id", "created_at"];
   async function exportCSV(type: string) {
     setExporting(true);
     try {
@@ -1335,17 +1351,11 @@ export function Reports() {
         {[
           { key: "start", label: "From (UTC)", type: "date" },
           { key: "end", label: "Through (UTC)", type: "date" },
-          { key: "offer_id", label: "Offer ID" },
           { key: "affiliate_id", label: "Partner ID" },
           { key: "country", label: "Country code" },
           { key: "sub_id", label: "Placement ID" },
           { key: "event_key", label: "Event code" },
           { key: "source", label: "Traffic source" },
-          { key: "aff_click_id", label: "Publisher click ID" },
-          ...Array.from({ length: 10 }, (_, i) => ({
-            key: `aff_sub${i + 1}`,
-            label: `Publisher sub ${i + 1}`,
-          })),
         ].map((f) => (
           <label key={f.key}>
             {f.label}
@@ -1358,6 +1368,66 @@ export function Reports() {
             />
           </label>
         ))}
+        <label>
+          Campaign
+          {canBrowseCampaigns ? (
+            <>
+              <select
+                value={filters.offer_id || ""}
+                onChange={(e) =>
+                  setFilters({ ...filters, offer_id: e.target.value })
+                }
+              >
+                <option value="">All campaigns</option>
+                {campaigns.data.map((campaign) => (
+                  <option key={campaign.id} value={campaign.id}>
+                    {campaign.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="text-button"
+                disabled={
+                  campaigns.loading || (!campaigns.hasMore && !campaigns.error)
+                }
+                onClick={campaigns.loadMore}
+              >
+                {campaigns.error ? "Retry campaigns" : "Load more campaigns"}
+              </button>
+            </>
+          ) : (
+            <input
+              value={filters.offer_id || ""}
+              onChange={(e) =>
+                setFilters({ ...filters, offer_id: e.target.value })
+              }
+            />
+          )}
+          {campaigns.error && <ErrorBox error={campaigns.error} />}
+        </label>
+        <details className="report-advanced">
+          <summary>Advanced attribution filters</summary>
+          <div className="form-grid">
+            {[
+              { key: "aff_click_id", label: "Publisher click ID" },
+              ...Array.from({ length: 10 }, (_, i) => ({
+                key: `aff_sub${i + 1}`,
+                label: `Publisher sub ${i + 1}`,
+              })),
+            ].map((field) => (
+              <label key={field.key}>
+                {field.label}
+                <input
+                  value={filters[field.key] || ""}
+                  onChange={(e) =>
+                    setFilters({ ...filters, [field.key]: e.target.value })
+                  }
+                />
+              </label>
+            ))}
+          </div>
+        </details>
         <label>
           Conversion status
           <select
@@ -1420,6 +1490,43 @@ export function Reports() {
           </div>
         }
       >
+        <div className="report-toolbar">
+          <details>
+            <summary>Choose columns</summary>
+            <div className="report-column-options">
+              {columnKeys.map((key) => (
+                <label key={key}>
+                  <input
+                    type="checkbox"
+                    checked={!(hidden[dataset] || []).includes(key)}
+                    disabled={["group", "currency", "id"].includes(key)}
+                    onChange={(e) =>
+                      setHidden((previous) => ({
+                        ...previous,
+                        [dataset]: e.target.checked
+                          ? (previous[dataset] || []).filter(
+                              (value) => value !== key,
+                            )
+                          : [...(previous[dataset] || []), key],
+                      }))
+                    }
+                  />
+                  {key.replaceAll("_", " ")}
+                </label>
+              ))}
+            </div>
+          </details>
+          {dataset === "grouped" && (
+            <label>
+              <input
+                type="checkbox"
+                checked={compare}
+                onChange={(e) => setCompare(e.target.checked)}
+              />{" "}
+              Compare with previous period
+            </label>
+          )}
+        </div>
         {result.error ? (
           <ErrorBox error={result.error} />
         ) : result.loading ? (
@@ -1429,38 +1536,36 @@ export function Reports() {
             rows={result.data || []}
             offset={offset}
             setOffset={dataset !== "grouped" ? setOffset : undefined}
-            columns={(result.data?.length
-              ? Object.keys(result.data[0])
-              : dataset === "grouped"
-                ? [
-                    "group",
-                    "currency",
-                    "clicks",
-                    "conversions",
-                    "approved_conversions",
-                  ]
-                : ["id", "offer_id", "created_at"]
-            ).map((key) => ({
-              key,
-              title: key
-                .replaceAll("_", " ")
-                .replace(/^./, (c) => c.toUpperCase()),
-              render: (row: Row) =>
-                key === "status" ? (
-                  <Badge value={row[key]} />
-                ) : key === "created_at" ? (
-                  date(row[key])
-                ) : ["revenue", "payout"].includes(key) ? (
-                  money(row[key], row.currency)
-                ) : typeof row[key] === "object" ? (
-                  JSON.stringify(row[key])
-                ) : (
-                  String(row[key] ?? "—")
-                ),
-            }))}
+            columns={columnKeys
+              .filter((key) => !(hidden[dataset] || []).includes(key))
+              .map((key) => ({
+                key,
+                title: key
+                  .replaceAll("_", " ")
+                  .replace(/^./, (c) => c.toUpperCase()),
+                render: (row: Row) =>
+                  key === "status" ? (
+                    <Badge value={row[key]} />
+                  ) : key === "created_at" ? (
+                    date(row[key])
+                  ) : ["revenue", "payout"].includes(key) ? (
+                    money(row[key], row.currency)
+                  ) : typeof row[key] === "object" ? (
+                    JSON.stringify(row[key])
+                  ) : (
+                    String(row[key] ?? "—")
+                  ),
+              }))}
           />
         )}
       </Panel>
+      {compare && dataset === "grouped" && !result.loading && !result.error && (
+        <ReportComparison
+          params={params}
+          current={result.data || []}
+          version={version}
+        />
+      )}
     </>
   );
 }
