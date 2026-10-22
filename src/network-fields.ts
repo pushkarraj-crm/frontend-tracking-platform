@@ -58,3 +58,37 @@ export const conditionOperators: Record<string, string> = {
   lt: "is less than",
   between: "is between",
 };
+// Quote-aware CSV rows; the server re-parses, so this only drives column and status pickers.
+export function parseCsv(content: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [],
+    cell = "",
+    quoted = false;
+  const endCell = () => {
+    row.push(cell);
+    cell = "";
+  };
+  const endRow = () => {
+    endCell();
+    rows.push(row);
+    row = [];
+  };
+  const text = content.replace(/^﻿/, "");
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted) {
+      if (c === '"' && text[i + 1] === '"') {
+        cell += '"';
+        i++;
+      } else if (c === '"') quoted = false;
+      else cell += c;
+    } else if (c === '"') quoted = true;
+    else if (c === ",") endCell();
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      endRow();
+    } else cell += c;
+  }
+  if (cell || row.length) endRow();
+  return rows.filter((r) => r.some((v) => v.trim()));
+}

@@ -13,7 +13,7 @@ import {
   type Field,
 } from "./ui";
 import { Action, ResourceRows, RequestForm, Result } from "./network-ui";
-import { text, select, json, parseJson } from "./network-fields";
+import { text, select, json, parseJson, parseCsv } from "./network-fields";
 export function NetworkOperations() {
   const { user } = useSession(),
     [params, setParams] = useSearchParams(),
@@ -502,6 +502,7 @@ export function NetworkTools() {
   const tabs = manage
     ? [
         "imports",
+        "mis-upload",
         "bulk-review",
         "link-health",
         "automation",
@@ -555,6 +556,7 @@ export function NetworkTools() {
           transform={(b) => parseJson(b, ["conversion_ids"])}
         />
       )}
+      {tab === "mis-upload" && manage && <MisUpload />}
       {tab === "link-health" && manage && <CampaignHealth />}
       {tab === "automation" && manage && <Automations />}
       {tab === "smart-links" && <SmartLinks />}
@@ -566,6 +568,178 @@ const jsonCsv: Field = text("csv_content", "Campaign CSV", {
   full: true,
   help: "Header: name,destination_url,revenue,payout,campaign_model. Network admins also supply advertiser_id. Up to 100 rows. Preview before unchecking Preview only.",
 });
+export function MisUpload() {
+  const campaigns = useCatalog("/campaigns"),
+    [id, setId] = useState(""),
+    events = useData<Row[]>(id ? `/campaigns/${id}/events` : null),
+    [content, setContent] = useState(""),
+    [columns, setColumns] = useState<Record<string, string>>({}),
+    [statuses, setStatuses] = useState<Record<string, string>>({}),
+    [preview, setPreview] = useState<Row | null>(null),
+    [result, setResult] = useState<Row | null>(null),
+    [error, setError] = useState<Error | null>(null),
+    [busy, setBusy] = useState(false);
+  const rows = parseCsv(content),
+    headers = rows[0] || [],
+    statusIndex = headers.indexOf(columns.status_column || ""),
+    values =
+      statusIndex < 0
+        ? []
+        : [...new Set(rows.slice(1).map((r) => (r[statusIndex] || "").trim()))]
+            .filter(Boolean)
+            .slice(0, 50),
+    stages = [
+      { code: "initial", name: "Lead" },
+      ...(events.data || []).map((e) => ({ code: e.code, name: e.name })),
+    ];
+  const reset = () => (setPreview(null), setResult(null), setError(null));
+  async function submit(dry_run: boolean) {
+    reset();
+    setBusy(true);
+    try {
+      const mapped = Object.fromEntries(
+        Object.entries(statuses)
+          .filter(([, v]) => v)
+          .map(([k, v]) => {
+            const [event_key, status] = v.split("|");
+            return [k, status ? { event_key, status } : { event_key }];
+          }),
+      );
+      const response = await api<Row>("/tools/conversions/import", {
+        method: "POST",
+        body: JSON.stringify({
+          campaign_id: id,
+          csv_content: content,
+          ...Object.fromEntries(Object.entries(columns).filter(([, v]) => v)),
+          statuses: mapped,
+          dry_run,
+        }),
+      });
+      if (dry_run) setPreview(response);
+      else setResult(response);
+    } catch (e) {
+      setError(e as Error);
+    } finally {
+      setBusy(false);
+    }
+  }
+  const column = (name: string, label: string, required: boolean) => (
+    <label key={name}>
+      {label}
+      <select
+        value={columns[name] || ""}
+        required={required}
+        onChange={(e) => {
+          reset();
+          setColumns({ ...columns, [name]: e.target.value });
+        }}
+      >
+        <option value="">{required ? "Select column" : "Not in file"}</option>
+        {headers.map((h) => (
+          <option key={h} value={h}>
+            {h}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+  const ready =
+    id &&
+    columns.reference_column &&
+    columns.status_column &&
+    Object.values(statuses).some(Boolean);
+  return (
+    <Panel
+      title="Upload advertiser MIS"
+      subtitle="Apply a bank or advertiser status report (CSV). Rows match our click ID when the file has it, otherwise the advertiser reference of an earlier conversion. Preview first; nothing is saved until you import."
+    >
+      <div className="network-form">
+        <label>
+          Campaign
+          <select
+            value={id}
+            onChange={(e) => {
+              reset();
+              setId(e.target.value);
+              setStatuses({});
+            }}
+          >
+            <option value="">Select campaign</option>
+            {campaigns.data.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          MIS file (CSV; save Excel sheets as CSV)
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            onChange={async (e) => {
+              reset();
+              setColumns({});
+              setStatuses({});
+              setContent((await e.target.files?.[0]?.text()) || "");
+            }}
+          />
+        </label>
+        {headers.length > 0 && (
+          <>
+            {column("reference_column", "Advertiser reference column", true)}
+            {column("status_column", "Status column", true)}
+            {column("click_id_column", "Our click ID column", false)}
+            {column("amount_column", "Sale amount column (CPS only)", false)}
+          </>
+        )}
+        {values.map((v) => (
+          <label key={v}>
+            Status “{v}” means
+            <select
+              value={statuses[v] || ""}
+              onChange={(e) => {
+                reset();
+                setStatuses({ ...statuses, [v]: e.target.value });
+              }}
+            >
+              <option value="">Ignore these rows</option>
+              {stages.flatMap((s) => [
+                <option key={`${s.code}|approved`} value={`${s.code}|approved`}>
+                  {s.name}: approved
+                </option>,
+                <option key={`${s.code}|rejected`} value={`${s.code}|rejected`}>
+                  {s.name}: rejected
+                </option>,
+                <option key={`${s.code}|`} value={`${s.code}|`}>
+                  {s.name}: record for review
+                </option>,
+              ])}
+            </select>
+          </label>
+        ))}
+      </div>
+      <div className="network-form row-actions">
+        <button
+          className="button secondary"
+          disabled={!ready || busy}
+          onClick={() => submit(true)}
+        >
+          Preview
+        </button>
+        <button
+          className="button primary"
+          disabled={!preview?.can_import || busy}
+          onClick={() => submit(false)}
+        >
+          Import
+        </button>
+      </div>
+      {error && <ErrorBox error={error} />}
+      {(result || preview) && <Result value={result || preview} />}
+    </Panel>
+  );
+}
 function CampaignHealth() {
   const campaigns = useCatalog("/campaigns"),
     [id, setId] = useState("");
