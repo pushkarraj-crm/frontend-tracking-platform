@@ -1,5 +1,23 @@
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
+import { createHmac } from 'node:crypto';
+import { isIP } from 'node:net';
+
+export function proxyIdentity(req, target, company = '') {
+  const secret = process.env.PROXY_IP_SECRET;
+  if (!secret || secret.length < 32) throw new Error('Proxy secret is not configured');
+  // Vercel replaces X-Forwarded-For with the connecting visitor's IP. Outside
+  // Vercel, use only the actual socket peer; never trust a public header by name.
+  const ip = process.env.VERCEL === '1' ? req.headers['x-forwarded-for'] : req.socket?.remoteAddress;
+  if (typeof ip !== 'string' || !isIP(ip) || ip.includes('%')) throw new Error('Visitor IP is unavailable');
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  const message = ['relay-ip-v1', timestamp, ip, req.method, target.pathname + target.search, company].join('\n');
+  return {
+    'x-relay-client-ip': ip,
+    'x-relay-proxy-time': timestamp,
+    'x-relay-proxy-signature': createHmac('sha256', secret).update(message).digest('hex'),
+  };
+}
 export function rewriteCookie(cookie) {
   let value = cookie.replace(/(;\s*Path=)\/auth(?=;|$)/i, '$1/api/auth').replace(/;\s*Domain=[^;]+/ig, '');
   if (!/;\s*Secure(?:;|$)/i.test(value)) value += '; Secure';
@@ -44,6 +62,12 @@ export default async function handler(req, res) {
   if(!['GET','HEAD'].includes(req.method) && req.body!==undefined && req.body!==null) {
     body=Buffer.isBuffer(req.body)?req.body:typeof req.body==='string'?req.body:JSON.stringify(req.body);
     if(Buffer.byteLength(body)>65536) return error(413,'Request body too large');
+  }
+  try {
+    const identity = proxyIdentity(req, target, headers.get('x-company-slug') || '');
+    for (const [name, value] of Object.entries(identity)) headers.set(name, value);
+  } catch {
+    return error(503,'Secure API proxy identity is not configured or unavailable.');
   }
   try {
     const upstream=await fetch(target,{method:req.method,headers,body,redirect:'manual',signal:AbortSignal.timeout(90000)});
