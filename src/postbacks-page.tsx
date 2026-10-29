@@ -315,7 +315,10 @@ const globalParameters: [string, string][] = [
     "status",
     "Optional: approved, rejected or pending. Send again later to update a conversion.",
   ],
-  ["coupon", "Optional coupon code used on the order."],
+  [
+    "coupon",
+    "Coupon code used on the order. A code from Coupons credits its partner, even without click_id (then txn_id is required).",
+  ],
   [
     "adv_sub1 – adv_sub5",
     "Optional extra values to store with the conversion.",

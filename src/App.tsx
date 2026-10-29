@@ -52,8 +52,8 @@ import {
 } from "./api";
 import { ErrorBox, Loading } from "./ui";
 import { AuthPage, AccountPage } from "./auth-pages";
+import { Dashboard } from "./home";
 import {
-  Dashboard,
   Partners,
   LinksPage,
   Conversions,
@@ -71,6 +71,7 @@ import {
   Postbacks,
 } from "./business-pages";
 import { InfluencerHome, InfluencerLinks } from "./influencer-pages";
+import { Coupons } from "./coupons-page";
 const currentYear = new Date().getFullYear();
 // Creators track their own brand deals: no partner, application or invoice screens.
 const influencerLabels: Record<string, string> = {
@@ -166,6 +167,12 @@ const navigation = [
     label: "My links",
     icon: Link2,
     roles: ["admin", "staff"],
+  },
+  {
+    path: "/coupons",
+    label: "Coupons",
+    icon: Tag,
+    roles: ["admin", "staff", "affiliate", "publisher"],
   },
   {
     path: "/postbacks",
@@ -498,6 +505,7 @@ export default function App() {
               ["/callbacks", PartnerCallbacks],
               ["/", Home],
               ["/my-links", InfluencerLinks],
+              ["/coupons", Coupons],
               ["/offers", Campaigns],
               ["/partners", Partners],
               ["/links", LinksPage],

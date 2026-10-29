@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { send, type Row } from "./api";
 import { useCatalog, useData } from "./hooks";
 import { money } from "./format";
+import { CircleDollarSign, MousePointer2, TrendingUp, Zap } from "lucide-react";
+import { KpiCard } from "./home";
 import {
   CopyButton,
   ErrorBox,
@@ -71,23 +73,47 @@ export function InfluencerHome() {
       {!data && !summary.error && <Loading />}
       {data && (
         <>
-          <div className="target-grid">
-            {[
-              ["Clicks", totals.clicks.toLocaleString("en-IN")],
-              ["Sales", totals.sales.toLocaleString("en-IN")],
-              ["Earnings", money(totals.earnings, currency)],
-              [
-                "Conversion rate",
+          <div className="kpi-grid">
+            <KpiCard
+              tone="violet"
+              icon={MousePointer2}
+              label="Clicks"
+              value={totals.clicks.toLocaleString("en-IN")}
+              change={null}
+              hint="Taps on your links"
+              spark={[]}
+            />
+            <KpiCard
+              tone="green"
+              icon={Zap}
+              label="Sales"
+              value={totals.sales.toLocaleString("en-IN")}
+              change={null}
+              hint="Includes totals brands reported"
+              spark={[]}
+            />
+            <KpiCard
+              tone="orange"
+              icon={CircleDollarSign}
+              label="Earnings"
+              value={money(totals.earnings, currency)}
+              change={null}
+              hint="Across all brand deals"
+              spark={[]}
+            />
+            <KpiCard
+              tone="sky"
+              icon={TrendingUp}
+              label="Conversion rate"
+              value={
                 totals.clicks
                   ? `${((totals.sales * 100) / totals.clicks).toFixed(2)}%`
-                  : "—",
-              ],
-            ].map(([name, value]) => (
-              <div className="target-card" key={name}>
-                <small>{name}</small>
-                <strong>{value}</strong>
-              </div>
-            ))}
+                  : "—"
+              }
+              change={null}
+              hint="Sales per click"
+              spark={[]}
+            />
           </div>
           <Panel
             title="By brand"
