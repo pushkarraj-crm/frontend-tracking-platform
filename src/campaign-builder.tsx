@@ -204,6 +204,7 @@ export function CampaignBuilder({
           internal_notes: value("internal_notes"),
           deep_link_enabled: data.get("deep_links") === "on",
           initial_auto_approve: data.get("auto_approve") === "on",
+          cap_action: value("cap_action"),
         },
         tracking_rules: {
           countries: list("countries").map((v) => v.toUpperCase()),
@@ -570,6 +571,16 @@ export function CampaignBuilder({
             <label>
               Daily conversion limit (optional)
               <input name="daily_conversions" type="number" min="1" />
+            </label>
+            <label>
+              When a conversion limit is full
+              <select name="cap_action" defaultValue="refuse">
+                <option value="refuse">Refuse the conversion</option>
+                <option value="reject">Record it as rejected</option>
+                <option value="pending">Record it as pending</option>
+                <option value="accept">Accept it anyway</option>
+                <option value="stop">Hold it and pause the campaign</option>
+              </select>
             </label>
           </div>
         </fieldset>

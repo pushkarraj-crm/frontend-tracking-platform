@@ -485,7 +485,8 @@ export function CampaignOperations() {
   );
 }
 function Profile({ id, manage }: { id: string; manage: boolean }) {
-  const result = useData<Row>(`/campaigns/${id}/profile`);
+  const result = useData<Row>(`/campaigns/${id}/profile`),
+    campaigns = useCatalog(manage ? "/campaigns" : null);
   if (result.loading) return <Loading />;
   if (result.error) return <ErrorBox error={result.error} />;
   const profile = result.data!;
@@ -563,13 +564,30 @@ function Profile({ id, manage }: { id: string; manage: boolean }) {
           max: 100,
           help: "Notify when a cap crosses this percentage of its limit.",
         }),
+        select(
+          "cap_action",
+          "When a conversion cap is full",
+          ["refuse", "reject", "pending", "accept", "stop"],
+          {
+            help: "Refuse: the advertiser's postback gets an error. Reject or pending: record it with that status, uncounted. Accept: record it normally, uncounted. Stop: hold it as pending and pause the campaign.",
+          },
+        ),
+        text("fallback_campaign_id", "Fallback campaign", {
+          required: false,
+          options: campaigns.data
+            .filter((c) => c.id !== id)
+            .map((c) => ({ value: String(c.id), label: String(c.name) })),
+          help: "Clicks this campaign can't take (targeting, schedule, click cap) go to the partner's link on this campaign instead. Used only when the partner has a link there.",
+        }),
         text("fallback_url", "Unavailable-campaign fallback URL", {
           type: "url",
           required: false,
+          help: "Used when there is no fallback campaign link.",
         }),
       ]}
       transform={(b) => {
         const { name, description, destination_url, ...settings } = b;
+        settings.fallback_campaign_id = settings.fallback_campaign_id || null;
         for (const key of [
           "categories",
           "deep_link_hosts",
