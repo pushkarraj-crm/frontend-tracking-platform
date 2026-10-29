@@ -14,6 +14,12 @@ import {
   Table,
 } from "./ui";
 import { date } from "./format";
+import {
+  platformPostback,
+  platformTemplates,
+  postbackFields,
+  unavailablePlatforms,
+} from "./platform-templates";
 
 function CampaignSetup() {
   const { user } = useSession();
@@ -290,6 +296,192 @@ function ReceiptStatus({ id }: { id: string }) {
   );
 }
 
+const globalParameters: [string, string][] = [
+  [
+    "click_id",
+    "Required. Relay's click ID; it identifies the campaign and partner.",
+  ],
+  [
+    "event",
+    "Campaign event code, e.g. lead, approved, disbursed, sale. Default: the campaign's main conversion.",
+  ],
+  [
+    "txn_id",
+    "Recommended. Your order or application number; prevents double counting.",
+  ],
+  ["amount", "Sale amount for CPS (percentage) events; ignored for CPL."],
+  ["currency", "Optional ISO code such as INR; must match the campaign."],
+  [
+    "status",
+    "Optional: approved, rejected or pending. Send again later to update a conversion.",
+  ],
+  ["coupon", "Optional coupon code used on the order."],
+  [
+    "adv_sub1 – adv_sub5",
+    "Optional extra values to store with the conversion.",
+  ],
+];
+
+function GlobalPostback({ admin }: { admin: boolean }) {
+  const [version, setVersion] = useState(0),
+    [error, setError] = useState<Error | null>(null);
+  const settings = useData<Row>("/postback-settings", version);
+  const url = settings.data?.url as string | undefined;
+  return (
+    <Panel
+      title="Your global postback URL"
+      subtitle="One URL for every campaign in this account. Advertisers fire it with the click ID; Relay finds the campaign from the click."
+    >
+      <div className="postback-content">
+        {settings.loading && <Loading />}
+        {settings.error && <ErrorBox error={settings.error} />}
+        {url && (
+          <>
+            <p className="postback-url">
+              <code>{`${url}?click_id={click_id}&event={event}&txn_id={txn_id}&amount={amount}&status={status}`}</code>
+              <CopyButton
+                value={`${url}?click_id={click_id}&event={event}&txn_id={txn_id}&amount={amount}&status={status}`}
+              />
+            </p>
+            <p>
+              Replace the values in braces with your advertiser platform's
+              macros. GET and POST (form or JSON) are both accepted. Keep this
+              URL private: it contains your account's secret.
+            </p>
+            <Table
+              rows={globalParameters.map(([name, meaning]) => ({
+                id: name,
+                name,
+                meaning,
+              }))}
+              columns={[
+                {
+                  key: "name",
+                  title: "Parameter",
+                  render: (r) => <code>{r.name}</code>,
+                },
+                { key: "meaning", title: "Meaning" },
+              ]}
+            />
+            {admin && (
+              <button
+                type="button"
+                className="button secondary"
+                onClick={async () => {
+                  if (
+                    !window.confirm(
+                      "Generate a new secret? The current global postback URL stops working immediately.",
+                    )
+                  )
+                    return;
+                  setError(null);
+                  try {
+                    await send("/postback-settings/rotate", {});
+                    setVersion((v) => v + 1);
+                  } catch (e) {
+                    setError(e as Error);
+                  }
+                }}
+              >
+                Generate new secret
+              </button>
+            )}
+            {error && <ErrorBox error={error} />}
+          </>
+        )}
+      </div>
+      {url && <ConnectPlatform url={url} />}
+    </Panel>
+  );
+}
+
+function ConnectPlatform({ url }: { url: string }) {
+  const [id, setId] = useState(""),
+    [custom, setCustom] = useState<Record<string, string>>({ click_id: "" });
+  const template = platformTemplates.find((t) => t.id === id);
+  const macros = template ? template.macros : custom;
+  const postback = platformPostback(url, macros);
+  return (
+    <div className="postback-content">
+      <h3>Connect another tracking platform</h3>
+      <p>
+        If the advertiser tracks on another platform, Relay can receive its
+        conversions as a partner. Choose the platform to get the exact setup.
+      </p>
+      <label className="postback-select">
+        Advertiser's platform
+        <select value={id} onChange={(e) => setId(e.target.value)}>
+          <option value="">Choose a platform</option>
+          {platformTemplates.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+          <option value="custom">Other (custom macros)</option>
+        </select>
+      </label>
+      {id === "custom" && (
+        <div className="network-form">
+          {postbackFields.map((field) => (
+            <label key={field}>
+              Their macro for <code>{field}</code>
+              <input
+                value={custom[field] || ""}
+                placeholder={
+                  field === "click_id" ? "Required, e.g. {sub1}" : "Optional"
+                }
+                onChange={(e) =>
+                  setCustom({ ...custom, [field]: e.target.value })
+                }
+              />
+            </label>
+          ))}
+        </div>
+      )}
+      {id && (
+        <ol>
+          <li>
+            In your Relay campaign, set the destination URL to the advertiser's{" "}
+            {template?.name || "platform"} tracking link with Relay's click ID
+            added:{" "}
+            <code>
+              {"…&"}
+              {template ? template.clickParameter : "<their sub-ID parameter>"}
+              {"={click_id}"}
+            </code>
+          </li>
+          <li>
+            Paste this into{" "}
+            {template ? template.where : "the platform's partner postback"}:
+            <p className="postback-url">
+              <code>{postback}</code>
+              <CopyButton value={postback} />
+            </p>
+          </li>
+          <li>
+            Conversions go to the campaign's main event. To use a funnel stage,
+            add <code>&event=</code> with your Relay event code.
+            {template && (
+              <>
+                {" "}
+                Macros from{" "}
+                <a href={template.source} target="_blank" rel="noreferrer">
+                  {template.name}'s documentation
+                </a>
+                .
+              </>
+            )}
+          </li>
+        </ol>
+      )}
+      <p className="muted">
+        Not available yet:{" "}
+        {unavailablePlatforms.map((p) => `${p.name}: ${p.reason}`).join(" ")}
+      </p>
+    </div>
+  );
+}
+
 export function Postbacks() {
   const { user } = useSession();
   const [version, setVersion] = useState(0),
@@ -311,6 +503,9 @@ export function Postbacks() {
             : "Receive conversion updates from your network in your own tracking system."
         }
       />
+      {(user.role === "admin" || user.role === "staff") && (
+        <GlobalPostback admin={user.role === "admin"} />
+      )}
       {manager && <CampaignSetup />}
       {user.role === "publisher" && (
         <Panel

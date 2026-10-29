@@ -23,7 +23,8 @@ import {
   Zap,
 } from "lucide-react";
 import { api, download, endSession, query, send, type Row } from "./api";
-import { staff, useSession, useToast } from "./context";
+import { staff, useAccountType, useSession, useToast } from "./context";
+import { BlockedSources, RejectedTraffic } from "./sources-pages";
 import {
   Badge,
   CopyButton,
@@ -37,6 +38,7 @@ import {
   SearchBox,
   Secret,
   Table,
+  TrackingUrl,
   type Field,
 } from "./ui";
 const size = 50;
@@ -44,10 +46,13 @@ function useReload() {
   const [version, setVersion] = useState(0);
   return [version, () => setVersion((v) => v + 1)] as const;
 }
-const roleOptions = (roles: string[]) =>
+const roleOptions = (roles: string[], brand = false) =>
   roles.map((value) => ({
     value,
-    label: value.replace("_", " ").replace(/^./, (c) => c.toUpperCase()),
+    label:
+      brand && value === "publisher"
+        ? "Agency"
+        : value.replace("_", " ").replace(/^./, (c) => c.toUpperCase()),
   }));
 function Action({
   children,
@@ -188,8 +193,67 @@ function Chart({ rows }: { rows: Row[] }) {
     </div>
   );
 }
+const paceLabels: Record<string, string> = {
+  ahead: "On track",
+  behind: "Behind pace",
+  met: "Met",
+  missed: "Missed",
+  not_started: "Not started",
+};
+// Brand home: each campaign goal and its per-agency split, with pace for the date range.
+function TargetProgress({ version }: { version: number }) {
+  const targets = useData<Row[]>("/targets", version);
+  if (targets.error) return <ErrorBox error={targets.error} />;
+  if (!targets.data) return <Loading />;
+  return (
+    <Panel
+      title="Sales targets"
+      subtitle="Progress counts approved and pending conversions; targets never block extra sales."
+    >
+      {targets.data.length === 0 ? (
+        <p className="muted">
+          Add targets in Campaign workspace → Sales targets to track each
+          agency's goal here.
+        </p>
+      ) : (
+        <div className="target-grid">
+          {targets.data.map((t) => (
+            <div className="target-card" key={t.id}>
+              <small>{t.campaign_name}</small>
+              <strong>{t.name}</strong>
+              <div className="target-row">
+                <span>
+                  {t.achieved} / {t.amount}
+                </span>
+                <b>{t.percent}%</b>
+              </div>
+              <div
+                className="target-bar"
+                role="progressbar"
+                aria-label={`${t.name} progress`}
+                aria-valuenow={Math.min(t.percent, 100)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <i
+                  className={`pace-${t.pace}`}
+                  style={{ width: `${Math.min(t.percent, 100)}%` }}
+                />
+              </div>
+              <div className="target-row">
+                <Badge value={paceLabels[t.pace] || t.pace} />
+                <span>Commission {money(t.commission, t.currency)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Panel>
+  );
+}
 export function Dashboard() {
   const { user } = useSession(),
+    brand = useAccountType() === "brand",
     [days, setDays] = useState("7"),
     [version, reload] = useReload();
   const [now] = useState(Date.now);
@@ -239,6 +303,7 @@ export function Dashboard() {
           </>
         }
       />
+      {brand && staff(user.role) && <TargetProgress version={version} />}
       {summary.error ? (
         <ErrorBox error={summary.error} retry={reload} />
       ) : summary.loading ? (
@@ -723,12 +788,19 @@ export function Partners() {
     [open, setOpen] = useState(false),
     [partnerRole, setPartnerRole] = useState<string | undefined>(undefined),
     [createdPartner, setCreatedPartner] = useState<Row | null>(null),
+    brand = useAccountType() === "brand",
     parents = useCatalog(user.role === "admin" && open ? "/users" : null),
     result = useData<Row[]>(`/users?offset=${offset}&limit=${size}`, version);
   return (
     <>
       <PageHead
-        title={user.role === "affiliate" ? "My publishers" : "Partners"}
+        title={
+          user.role === "affiliate"
+            ? "My publishers"
+            : brand
+              ? "Agencies & partners"
+              : "Partners"
+        }
         description="The people behind your network’s next chapter."
         actions={
           user.role !== "staff" && (
@@ -738,21 +810,24 @@ export function Partners() {
                   <button
                     className="button secondary"
                     onClick={() => {
-                      setPartnerRole("advertiser");
+                      // Brands give each agency its own campaign link, which publishers hold.
+                      setPartnerRole(brand ? "publisher" : "advertiser");
                       setOpen(true);
                     }}
                   >
-                    Add advertiser
+                    {brand ? "Add agency" : "Add advertiser"}
                   </button>
-                  <button
-                    className="button secondary"
-                    onClick={() => {
-                      setPartnerRole("publisher");
-                      setOpen(true);
-                    }}
-                  >
-                    Add publisher
-                  </button>
+                  {!brand && (
+                    <button
+                      className="button secondary"
+                      onClick={() => {
+                        setPartnerRole("publisher");
+                        setOpen(true);
+                      }}
+                    >
+                      Add publisher
+                    </button>
+                  )}
                 </>
               )}
               <button
@@ -776,11 +851,17 @@ export function Partners() {
         <div className="network-form">
           {(user.role === "affiliate"
             ? ["publisher"]
-            : ["advertiser", "publisher"]
+            : brand
+              ? ["publisher"]
+              : ["advertiser", "publisher"]
           ).map((role) => (
             <div key={role}>
               <strong>
-                {role === "advertiser" ? "Advertiser login" : "Publisher login"}
+                {role === "advertiser"
+                  ? "Advertiser login"
+                  : brand
+                    ? "Agency login"
+                    : "Publisher login"}
               </strong>
               <p>
                 <a
@@ -855,7 +936,11 @@ export function Partners() {
               {
                 key: "role",
                 title: "Role",
-                render: (r) => <span className="role-label">{r.role}</span>,
+                render: (r) => (
+                  <span className="role-label">
+                    {brand && r.role === "publisher" ? "agency" : r.role}
+                  </span>
+                ),
               },
               {
                 key: "active",
@@ -943,10 +1028,11 @@ export function Partners() {
                     : [
                         "affiliate",
                         "publisher",
-                        "advertiser",
+                        ...(brand ? [] : ["advertiser"]),
                         "staff",
                         "admin",
                       ],
+                  brand,
                 ),
                 defaultValue:
                   user.role === "affiliate" ? "publisher" : partnerRole,
@@ -1062,12 +1148,7 @@ export function LinksPage() {
               {
                 key: "url",
                 title: "Tracking URL",
-                render: (r) => (
-                  <div className="copy-cell">
-                    <code>{r.url}</code>
-                    <CopyButton value={r.url} label="Copy tracking URL" />
-                  </div>
-                ),
+                render: (r) => <TrackingUrl url={r.url} />,
               },
             ]}
           />
@@ -1120,6 +1201,7 @@ export function LinksPage() {
           />
         </Modal>
       )}
+      {["affiliate", "publisher"].includes(user.role) && <RejectedTraffic />}
     </>
   );
 }
@@ -1746,6 +1828,7 @@ export function Fraud() {
           Offer rules <ArrowUpRight size={16} />
         </Link>
       </div>
+      <BlockedSources />
       <Panel
         title="Flagged activity"
         subtitle="Latest 100 events. Review decisions are recorded in your audit log."

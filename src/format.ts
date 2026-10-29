@@ -21,3 +21,6 @@ export function date(value: unknown) {
 export function short(value: unknown) {
   return value ? String(value).slice(0, 8) : "—";
 }
+// Offer18-style placeholders partners replace with their own tracker's macros.
+export const withLinkParameters = (url: string) =>
+  `${url}&aff_click_id={aff_click_id}&sub_aff_id={sub_aff_id}&aff_sub1={aff_sub1}&source={source}`;

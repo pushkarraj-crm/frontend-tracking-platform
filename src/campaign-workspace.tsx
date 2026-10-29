@@ -2,7 +2,15 @@ import { useState } from "react";
 import { send, type Row } from "./api";
 import { useData } from "./hooks";
 import { useSession, useToast } from "./context";
-import { Badge, CopyButton, ErrorBox, Fields, Loading, Panel } from "./ui";
+import {
+  Badge,
+  CopyButton,
+  ErrorBox,
+  Fields,
+  Loading,
+  Panel,
+  TrackingUrl,
+} from "./ui";
 import { campaignRuleFields } from "./campaign-rule-fields";
 import { Action } from "./network-ui";
 
@@ -230,10 +238,7 @@ export function CampaignOverview({
                 {link && (
                   <div className="notice">
                     <strong>Your tracking link</strong>
-                    <p>
-                      <code>{link.url}</code>
-                      <CopyButton value={link.url} />
-                    </p>
+                    <TrackingUrl url={link.url} />
                   </div>
                 )}
               </>

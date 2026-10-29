@@ -2339,3 +2339,103 @@ body:has(.stage-banner) .sidebar {
 .postback-empty { border: 1px dashed #c9d8ce; border-radius: 10px; padding: 24px; }
 @media (max-width: 1000px) { .postback-grid { grid-template-columns: 1fr; } }
 @media (max-width: 650px) { .postback-content, .postback-reference { padding: 16px; } }
+
+.target-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  padding: 0 24px 24px;
+}
+.target-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+}
+.target-card small {
+  color: var(--muted);
+}
+.target-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.target-bar {
+  height: 8px;
+  border-radius: 8px;
+  background: var(--border);
+  overflow: hidden;
+}
+.target-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 8px;
+  background: var(--green);
+}
+.target-bar i.pace-behind,
+.target-bar i.pace-missed {
+  background: #e5484d;
+}
+
+.tracking-url {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.tracking-url code {
+  overflow-wrap: anywhere;
+}
+
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.template-card {
+  display: grid;
+  gap: 6px;
+  text-align: left;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  cursor: pointer;
+  font: inherit;
+}
+.template-card small {
+  color: var(--muted);
+}
+.template-card.is-selected {
+  border-color: var(--green);
+  box-shadow: 0 0 0 2px var(--green);
+}
+.stage-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+.stage-list small {
+  color: var(--muted);
+}
+.stage-row {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 1fr 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+.inline-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  border: 0;
+  padding: 0;
+}
+@media (max-width: 640px) {
+  .stage-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}

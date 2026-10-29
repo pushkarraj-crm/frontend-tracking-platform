@@ -80,6 +80,15 @@ export const campaignRuleFields: Field[] = [
     defaultValue: 0,
   },
   {
+    name: "unique_click_hours",
+    label: "Count one click per visitor per (hours)",
+    type: "number",
+    min: 0,
+    max: 720,
+    defaultValue: 0,
+    help: "0 counts every click. Otherwise a repeat click from the same visitor reuses their earlier click.",
+  },
+  {
     name: "block_bots",
     label: "Block common bots",
     type: "checkbox",

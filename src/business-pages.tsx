@@ -1,4 +1,4 @@
-import { CampaignCreate } from "./campaign-create";
+import { CampaignBuilder } from "./campaign-builder";
 import { CampaignRules } from "./campaign-rules";
 import { useState, type ReactNode } from "react";
 import { api, send, type Row } from "./api";
@@ -15,6 +15,7 @@ import {
   CopyButton,
   ErrorBox,
   Loading,
+  TrackingUrl,
   type Field,
 } from "./ui";
 
@@ -108,10 +109,7 @@ function PublisherLink({
       {result && (
         <>
           <h3>Tracking URL</h3>
-          <p>
-            <code>{result.url}</code>
-            <CopyButton value={result.url} />
-          </p>
+          <TrackingUrl url={result.url} />
           <h3>Final landing URLs</h3>
           {result.final_urls?.length ? (
             result.final_urls.map((url: string) => (
@@ -147,7 +145,28 @@ export function Campaigns() {
       version,
     ),
     users = useCatalog(open && staff(user.role) ? "/users" : null);
-  const manage = user.role === "advertiser" || (staff(user.role) && (user.staff_permissions == null || user.staff_permissions.includes("campaigns:write")));
+  const manage =
+    user.role === "advertiser" ||
+    (staff(user.role) &&
+      (user.staff_permissions == null ||
+        user.staff_permissions.includes("campaigns:write")));
+  if (open)
+    return (
+      <CampaignBuilder
+        users={users}
+        role={user.role}
+        close={() => setOpen(false)}
+        created={(campaign) => {
+          setSecret(campaign.postback_key);
+          setOpen(false);
+          setOffset(0);
+          setVersion((v) => v + 1);
+          toast(
+            "Campaign created with its funnel stages, targeting and access settings.",
+          );
+        }}
+      />
+    );
   return (
     <>
       <PageHead
@@ -169,12 +188,24 @@ export function Campaigns() {
       )}
       {cloneCampaign && (
         <Modal title="Clone campaign" onClose={() => setCloneCampaign(null)}>
-          <p>The copy starts paused with a new S2S key. Publisher approvals, traffic and payment history are not copied.</p>
+          <p>
+            The copy starts paused with a new S2S key. Publisher approvals,
+            traffic and payment history are not copied.
+          </p>
           <Fields
-            fields={[{ name: "name", label: "New campaign name", defaultValue: `${cloneCampaign.name} copy` }]}
+            fields={[
+              {
+                name: "name",
+                label: "New campaign name",
+                defaultValue: `${cloneCampaign.name} copy`,
+              },
+            ]}
             submit="Create paused copy"
             onSubmit={async (body) => {
-              const created = await send<Row>(`/campaigns/${cloneCampaign.id}/clone`, body);
+              const created = await send<Row>(
+                `/campaigns/${cloneCampaign.id}/clone`,
+                body,
+              );
               setSecret(created.postback_key);
               setCloneCampaign(null);
               setOffset(0);
@@ -206,7 +237,12 @@ export function Campaigns() {
                 title: "Campaign",
                 render: (r) => (
                   <>
-                    <a className="campaign-title-link" href={`/campaign-operations?campaign=${encodeURIComponent(r.id)}`}><strong>{r.name}</strong></a>
+                    <a
+                      className="campaign-title-link"
+                      href={`/campaign-operations?campaign=${encodeURIComponent(r.id)}`}
+                    >
+                      <strong>{r.name}</strong>
+                    </a>
                     <p>{r.description}</p>
                   </>
                 ),
@@ -265,7 +301,12 @@ export function Campaigns() {
                       >
                         Rotate S2S key
                       </Action>
-                      <button className="button secondary" onClick={() => setCloneCampaign(r)}>Clone campaign</button>
+                      <button
+                        className="button secondary"
+                        onClick={() => setCloneCampaign(r)}
+                      >
+                        Clone campaign
+                      </button>
                       <button
                         className="button secondary"
                         onClick={() => setRulesCampaign(r)}
@@ -300,15 +341,6 @@ export function Campaigns() {
           />
         </Resource>
       </Panel>
-      {open && (
-        <CampaignCreate users={users} role={user.role} close={() => setOpen(false)} created={(campaign) => {
-          setSecret(campaign.postback_key);
-          setOpen(false);
-          setOffset(0);
-          setVersion((v) => v + 1);
-          toast("Campaign created. Targeting and publisher access settings are saved.");
-        }} />
-      )}
     </>
   );
 }

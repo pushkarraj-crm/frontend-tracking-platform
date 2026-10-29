@@ -1,3 +1,4 @@
+import { withLinkParameters } from "./format";
 import {
   useEffect,
   useRef,
@@ -114,6 +115,26 @@ export function CopyButton({
     >
       {done ? <Check size={15} /> : <Copy size={15} />}
     </button>
+  );
+}
+export function TrackingUrl({ url }: { url: string }) {
+  const full = withLinkParameters(url);
+  return (
+    <div className="tracking-url">
+      <div className="copy-cell">
+        <code>{url}</code>
+        <CopyButton value={url} label="Copy tracking URL" />
+      </div>
+      <div className="copy-cell">
+        <code>{full}</code>
+        <CopyButton value={full} label="Copy tracking URL with parameters" />
+      </div>
+      <small className="muted">
+        Replace the values in braces with your own macros: aff_click_id (your
+        click ID), sub_aff_id, aff_sub1–aff_sub10, source. Device IDs (deviceid,
+        googleaid, androidid, iosidfa) are accepted too.
+      </small>
+    </div>
   );
 }
 export function Secret({ title, value }: { title: string; value: string }) {

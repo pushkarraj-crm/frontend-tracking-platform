@@ -3,7 +3,14 @@ import { CampaignOperations } from "./campaign-operations";
 import { NetworkOperations, NetworkTools } from "./network-operations";
 import { PartnerCallbacks } from "./callbacks-page";
 import { useData } from "./hooks";
-import { SessionContext, ToastContext, useSession, useToast } from "./context";
+import {
+  AccountTypeContext,
+  SessionContext,
+  ToastContext,
+  useAccountType,
+  useSession,
+  useToast,
+} from "./context";
 import { Brand } from "./brand";
 import { useEffect, useState, type ReactNode, type CSSProperties } from "react";
 import {
@@ -63,7 +70,42 @@ import {
   AdvertiserDomains,
   Postbacks,
 } from "./business-pages";
+import { InfluencerHome, InfluencerLinks } from "./influencer-pages";
 const currentYear = new Date().getFullYear();
+// Creators track their own brand deals: no partner, application or invoice screens.
+const influencerLabels: Record<string, string> = {
+  "/offers": "Brand deals",
+  "/campaign-operations": "Deal settings",
+  "/conversions": "Sales",
+  "/postbacks": "Postbacks",
+  "/tools": "Tools",
+  "/network": "Account settings",
+};
+const influencerHidden = new Set([
+  "/partners",
+  "/applications",
+  "/fraud",
+  "/links",
+  "/callbacks",
+  "/payouts",
+  "/domains",
+]);
+const shownFor = (path: string, accountType: string) =>
+  accountType === "influencer"
+    ? !influencerHidden.has(path)
+    : path !== "/my-links";
+function Home() {
+  return useAccountType() === "influencer" ? <InfluencerHome /> : <Dashboard />;
+}
+// Brand accounts are their own advertiser and work with agencies.
+const brandLabels: Record<string, string> = {
+  "/partners": "Agencies & partners",
+  "/callbacks": "Agency callbacks",
+  "/payouts": "Agency invoices",
+  "/domains": "Tracking domains",
+  "/network": "Brand settings",
+  "/tools": "Tools",
+};
 const navigation = [
   {
     path: "/",
@@ -118,6 +160,12 @@ const navigation = [
     label: "Tracking links",
     icon: Link2,
     roles: ["admin", "staff", "affiliate", "publisher"],
+  },
+  {
+    path: "/my-links",
+    label: "My links",
+    icon: Link2,
+    roles: ["admin", "staff"],
   },
   {
     path: "/postbacks",
@@ -197,7 +245,8 @@ function Layout() {
       ? branding.data.logo_url
       : null;
   const workspace = useData<Row>("/workspace"),
-    company = workspace.data?.name || "Your network";
+    company = workspace.data?.name || "Your network",
+    accountType = (workspace.data?.account_type as string) || "network";
   const days = workspace.data?.trial_ends_at
     ? Math.max(
         0,
@@ -254,14 +303,24 @@ function Layout() {
           </span>
           <span>
             <strong>{company}</strong>
-            <small>{user.role.replace("_", " ")} portal</small>
+            <small>
+              {user.role === "admin" && accountType === "brand"
+                ? "brand"
+                : user.role === "admin" && accountType === "influencer"
+                  ? "creator"
+                  : user.role.replace("_", " ")}{" "}
+              portal
+            </small>
           </span>
           <ChevronDown size={14} />
         </div>
         <div className="nav-label">WORKSPACE</div>
         <nav>
           {navigation
-            .filter((n) => n.roles.includes(user.role))
+            .filter(
+              (n) =>
+                n.roles.includes(user.role) && shownFor(n.path, accountType),
+            )
             .map(({ path, label, icon: Icon }) => (
               <NavLink
                 key={path}
@@ -272,8 +331,13 @@ function Layout() {
                 <Icon size={18} />
                 <span>
                   {user.role === "affiliate" && path === "/partners"
-                    ? "My publishers"
-                    : label}
+                    ? accountType === "brand"
+                      ? "My team"
+                      : "My publishers"
+                    : (accountType === "brand" && brandLabels[path]) ||
+                      (accountType === "influencer" &&
+                        influencerLabels[path]) ||
+                      label}
                 </span>
               </NavLink>
             ))}
@@ -346,7 +410,9 @@ function Layout() {
           </div>
         </header>
         <main>
-          <Outlet />
+          <AccountTypeContext.Provider value={accountType}>
+            <Outlet />
+          </AccountTypeContext.Provider>
         </main>
         <footer className="app-footer">
           <span>© {currentYear} Relay · Built for better partnerships.</span>
@@ -430,7 +496,8 @@ export default function App() {
               ["/network", NetworkOperations],
               ["/tools", NetworkTools],
               ["/callbacks", PartnerCallbacks],
-              ["/", Dashboard],
+              ["/", Home],
+              ["/my-links", InfluencerLinks],
               ["/offers", Campaigns],
               ["/partners", Partners],
               ["/links", LinksPage],

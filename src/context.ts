@@ -9,3 +9,8 @@ export function useToast() {
   return useContext(ToastContext);
 }
 export const staff = (role: string) => ["admin", "staff"].includes(role);
+// brand | network | influencer, from /workspace; defaults to network while loading.
+export const AccountTypeContext = createContext("network");
+export function useAccountType() {
+  return useContext(AccountTypeContext);
+}

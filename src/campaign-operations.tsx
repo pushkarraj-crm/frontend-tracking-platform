@@ -48,6 +48,7 @@ export function CampaignOperations() {
         "events",
         "commission-rules",
         "caps",
+        "targets",
         "destinations",
         "creatives",
         "traffic-rules",
@@ -63,6 +64,7 @@ export function CampaignOperations() {
     events: "Events",
     "commission-rules": "Payout rules",
     caps: "Caps",
+    targets: "Sales targets",
     destinations: "Landing pages",
     creatives: "Creatives",
     "traffic-rules": "Traffic rules",
@@ -183,6 +185,30 @@ export function CampaignOperations() {
         step: "0.0001",
         help: "Counts must be whole numbers. When editing, only the name and maximum can change; create a new cap for a different scope or period.",
       }),
+    ];
+  if (tab === "targets")
+    fields = [
+      name,
+      {
+        name: "partner_id",
+        label: "Agency or partner (empty = overall goal)",
+        required: false,
+        options: users.data
+          .filter((u) => ["affiliate", "publisher"].includes(u.role))
+          .map((u) => ({ value: u.id, label: u.name || u.email })),
+        source: users,
+      },
+      text("event_key", "Event code", {
+        defaultValue: "initial",
+        help: "Use initial for the main conversion, or a funnel stage such as disbursed.",
+      }),
+      text("amount", "Target (conversions)", {
+        type: "number",
+        min: 1,
+        step: "1",
+      }),
+      text("starts_on", "Starts on", { type: "date" }),
+      text("ends_on", "Ends on", { type: "date" }),
     ];
   if (tab === "destinations") {
     fields = [
@@ -316,50 +342,63 @@ export function CampaignOperations() {
                       ...(manage ? ["auto_approve"] : []),
                       "active",
                     ]
-                  : tab === "caps"
+                  : tab === "targets"
                     ? [
                         "name",
-                        "metric",
-                        "period",
-                        "timezone",
                         "amount",
-                        "recorded_usage",
+                        "achieved",
+                        "percent",
+                        "expected_by_today",
+                        "pace",
+                        "commission",
+                        "starts_on",
+                        "ends_on",
                         "active",
                       ]
-                    : tab === "commission-rules"
+                    : tab === "caps"
                       ? [
                           "name",
-                          "publisher_id",
-                          "event_key",
-                          "model",
-                          "payout",
-                          ...(manage ? ["revenue"] : []),
-                          "sale_percentage",
-                          "conditions",
-                          "priority",
+                          "metric",
+                          "period",
+                          "timezone",
+                          "amount",
+                          "recorded_usage",
                           "active",
                         ]
-                      : tab === "destinations"
+                      : tab === "commission-rules"
                         ? [
                             "name",
-                            "url",
-                            "weight",
-                            "countries",
-                            "publisher_ids",
+                            "publisher_id",
+                            "event_key",
+                            "model",
+                            "payout",
+                            ...(manage ? ["revenue"] : []),
+                            "sale_percentage",
+                            "conditions",
+                            "priority",
                             "active",
                           ]
-                        : tab === "creatives"
-                          ? ["name", "kind", "url", "description", "active"]
-                          : tab === "traffic-rules"
-                            ? [
-                                "name",
-                                "phase",
-                                "action",
-                                "conditions",
-                                "priority",
-                                "active",
-                              ]
-                            : undefined
+                        : tab === "destinations"
+                          ? [
+                              "name",
+                              "url",
+                              "weight",
+                              "countries",
+                              "publisher_ids",
+                              "active",
+                            ]
+                          : tab === "creatives"
+                            ? ["name", "kind", "url", "description", "active"]
+                            : tab === "traffic-rules"
+                              ? [
+                                  "name",
+                                  "phase",
+                                  "action",
+                                  "conditions",
+                                  "priority",
+                                  "active",
+                                ]
+                              : undefined
               }
               editable
               renderers={{
