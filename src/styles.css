@@ -2851,3 +2851,59 @@ a:focus-visible {
   color: var(--navy);
   font-size: 13px;
 }
+
+/* Grouped sidebar menus (Offer18-style): a group header opens its sub-menu. */
+.sidebar nav .nav-group > button {
+  display: flex;
+  width: 100%;
+  gap: 11px;
+  align-items: center;
+  padding: 11px 15px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #b9b5df;
+  background: none;
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+.sidebar nav .nav-group > button:hover {
+  background: #ffffff10;
+  color: #fff;
+}
+.sidebar nav .nav-group.current > button {
+  color: #fff;
+  font-weight: 650;
+}
+.sidebar nav .nav-chevron {
+  margin-left: auto;
+  transition: transform 0.15s;
+}
+.sidebar nav .nav-group > button[aria-expanded="true"] .nav-chevron {
+  transform: rotate(180deg);
+}
+.sidebar nav .nav-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 2px 0 6px 26px;
+  padding-left: 12px;
+  border-left: 1px solid #ffffff1f;
+}
+.sidebar nav .nav-sub a {
+  padding: 7px 10px;
+  font-size: 12px;
+  color: #a9a5d2;
+  border-radius: 8px;
+}
+.sidebar nav .nav-sub a:hover {
+  background: #ffffff10;
+  color: #fff;
+}
+.sidebar nav .nav-sub a.active {
+  background: linear-gradient(90deg, var(--green), var(--violet-2));
+  color: #fff;
+  font-weight: 600;
+}

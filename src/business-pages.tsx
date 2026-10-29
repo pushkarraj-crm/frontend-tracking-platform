@@ -1,6 +1,7 @@
 import { CampaignBuilder } from "./campaign-builder";
 import { CampaignRules } from "./campaign-rules";
 import { useState, type ReactNode } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, send, type Row } from "./api";
 import { useCatalog, useData } from "./hooks";
 import { useSession, useToast, staff } from "./context";
@@ -132,14 +133,18 @@ function PublisherLink({
 
 export function Campaigns() {
   const { user } = useSession(),
+    navigate = useNavigate(),
     toast = useToast(),
     [version, setVersion] = useState(0),
     [offset, setOffset] = useState(0),
-    [open, setOpen] = useState(false),
+    [params, setParams] = useSearchParams(),
     [rulesCampaign, setRulesCampaign] = useState<Row | null>(null),
     [cloneCampaign, setCloneCampaign] = useState<Row | null>(null),
     [secret, setSecret] = useState(""),
     [linkCampaign, setLinkCampaign] = useState<Row | null>(null);
+  // "Campaigns → Create campaign" in the sidebar opens the builder via ?new=1.
+  const open = params.get("new") === "1",
+    setOpen = (value: boolean) => setParams(value ? { new: "1" } : {});
   const result = useData<Row[]>(
       `/campaigns?offset=${offset}&limit=50`,
       version,
@@ -157,12 +162,11 @@ export function Campaigns() {
         role={user.role}
         close={() => setOpen(false)}
         created={(campaign) => {
-          setSecret(campaign.postback_key);
-          setOpen(false);
-          setOffset(0);
-          setVersion((v) => v + 1);
-          toast(
-            "Campaign created with its funnel stages, targeting and access settings.",
+          toast("Campaign created. Now add affiliates and share their links.");
+          // Like Offer18: straight to the new campaign's Affiliates tab.
+          navigate(
+            `/campaign-operations?campaign=${encodeURIComponent(campaign.id)}&tab=affiliates`,
+            { state: { postbackKey: campaign.postback_key } },
           );
         }}
       />
@@ -237,12 +241,12 @@ export function Campaigns() {
                 title: "Campaign",
                 render: (r) => (
                   <>
-                    <a
+                    <Link
                       className="campaign-title-link"
-                      href={`/campaign-operations?campaign=${encodeURIComponent(r.id)}`}
+                      to={`/campaign-operations?campaign=${encodeURIComponent(r.id)}`}
                     >
                       <strong>{r.name}</strong>
-                    </a>
+                    </Link>
                     <p>{r.description}</p>
                   </>
                 ),

@@ -5,18 +5,34 @@ import { Invoices, Postbacks, Campaigns } from "./business-pages";
 import { SessionContext } from "./context";
 import type { Role } from "./api";
 import type { ReactNode } from "react";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 afterEach(() => vi.restoreAllMocks());
+// After saving, a new campaign opens on its own page with the one-time postback key.
+function CampaignPageProbe() {
+  const location = useLocation();
+  return (
+    <p>
+      {(location.state as { postbackKey?: string }).postbackKey}{" "}
+      {location.search}
+    </p>
+  );
+}
 function portal(role: Role, children: ReactNode) {
   render(
-    <SessionContext.Provider
-      value={{
-        access_token: "test",
-        csrf_token: "test",
-        user: { id: "party", email: "party@example.com", role },
-      }}
-    >
-      {children}
-    </SessionContext.Provider>,
+    <MemoryRouter>
+      <SessionContext.Provider
+        value={{
+          access_token: "test",
+          csrf_token: "test",
+          user: { id: "party", email: "party@example.com", role },
+        }}
+      >
+        <Routes>
+          <Route path="/campaign-operations" element={<CampaignPageProbe />} />
+          <Route path="*" element={children} />
+        </Routes>
+      </SessionContext.Provider>
+    </MemoryRouter>,
   );
 }
 function invoices(status: string) {
@@ -203,7 +219,7 @@ it("creates a campaign with independent pricing, targeting and access settings",
   await userEvent.click(
     screen.getAllByRole("button", { name: "Create campaign" }).at(-1)!,
   );
-  expect(await screen.findByText("created-key")).toBeVisible();
+  expect(await screen.findByText(/created-key .*tab=affiliates/)).toBeVisible();
   const call = fetcher.mock.calls.find(([, init]) => init?.method === "POST");
   expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({
     revenue: "10",
@@ -244,7 +260,7 @@ it("a fintech template creates the campaign with its funnel stages", async () =>
   await userEvent.click(
     screen.getAllByRole("button", { name: "Create campaign" }).at(-1)!,
   );
-  expect(await screen.findByText("loan-key")).toBeVisible();
+  expect(await screen.findByText(/loan-key .*tab=affiliates/)).toBeVisible();
   const call = fetcher.mock.calls.find(([, init]) => init?.method === "POST");
   const body = JSON.parse(String(call?.[1]?.body));
   expect(body).toMatchObject({

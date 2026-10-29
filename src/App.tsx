@@ -1,5 +1,7 @@
 import { LoginGate } from "./login-gate";
 import { ActingBanner } from "./teams";
+import { menuFor } from "./menu";
+import { SidebarMenu } from "./sidebar-menu";
 import { CampaignOperations } from "./campaign-operations";
 import { NetworkOperations, NetworkTools } from "./network-operations";
 import { PartnerCallbacks } from "./callbacks-page";
@@ -17,7 +19,6 @@ import { useEffect, useState, type ReactNode, type CSSProperties } from "react";
 import {
   Link,
   Navigate,
-  NavLink,
   Outlet,
   Route,
   Routes,
@@ -74,15 +75,6 @@ import {
 import { InfluencerHome, InfluencerLinks } from "./influencer-pages";
 import { Coupons } from "./coupons-page";
 const currentYear = new Date().getFullYear();
-// Creators track their own brand deals: no partner, application or invoice screens.
-const influencerLabels: Record<string, string> = {
-  "/offers": "Brand deals",
-  "/campaign-operations": "Deal settings",
-  "/conversions": "Sales",
-  "/postbacks": "Postbacks",
-  "/tools": "Tools",
-  "/network": "Account settings",
-};
 const influencerHidden = new Set([
   "/partners",
   "/applications",
@@ -99,15 +91,6 @@ const shownFor = (path: string, accountType: string) =>
 function Home() {
   return useAccountType() === "influencer" ? <InfluencerHome /> : <Dashboard />;
 }
-// Brand accounts are their own advertiser and work with agencies.
-const brandLabels: Record<string, string> = {
-  "/partners": "Agencies & partners",
-  "/callbacks": "Agency callbacks",
-  "/payouts": "Agency invoices",
-  "/domains": "Tracking domains",
-  "/network": "Brand settings",
-  "/tools": "Tools",
-};
 const navigation = [
   {
     path: "/",
@@ -323,33 +306,16 @@ function Layout() {
           <ChevronDown size={14} />
         </div>
         <div className="nav-label">WORKSPACE</div>
-        <nav>
-          {navigation
-            .filter(
-              (n) =>
-                n.roles.includes(user.role) && shownFor(n.path, accountType),
-            )
-            .map(({ path, label, icon: Icon }) => (
-              <NavLink
-                key={path}
-                to={path}
-                end={path === "/"}
-                onClick={() => setOpen(false)}
-              >
-                <Icon size={18} />
-                <span>
-                  {user.role === "affiliate" && path === "/partners"
-                    ? accountType === "brand"
-                      ? "My team"
-                      : "My publishers"
-                    : (accountType === "brand" && brandLabels[path]) ||
-                      (accountType === "influencer" &&
-                        influencerLabels[path]) ||
-                      label}
-                </span>
-              </NavLink>
-            ))}
-        </nav>
+        <SidebarMenu
+          groups={menuFor(accountType, user.role)}
+          role={user.role}
+          allowed={(path) =>
+            !!navigation
+              .find((n) => n.path === path)
+              ?.roles.includes(user.role) && shownFor(path, accountType)
+          }
+          onNavigate={() => setOpen(false)}
+        />
         <div className="sidebar-bottom">
           {user.role === "admin" && workspace.data?.plan === "trial" && (
             <div className="trial-card">

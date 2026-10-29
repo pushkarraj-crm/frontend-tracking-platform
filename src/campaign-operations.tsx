@@ -4,11 +4,12 @@ import {
   CapUsage,
 } from "./campaign-workspace";
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
+import { CampaignAffiliates } from "./campaign-affiliates";
 import { api, type Row } from "./api";
 import { useCatalog, useData } from "./hooks";
-import { useSession, staff } from "./context";
-import { PageHead, Panel, Loading, ErrorBox, type Field } from "./ui";
+import { staff, useAccountType, useSession } from "./context";
+import { PageHead, Panel, Loading, ErrorBox, Secret, type Field } from "./ui";
 import {
   Action,
   ResourceEditor,
@@ -31,45 +32,53 @@ const conditions = text("conditions", "Conditions", {
 const name = text("name", "Name");
 export function CampaignOperations() {
   const { user } = useSession(),
+    brand = useAccountType() === "brand",
     [params, setParams] = useSearchParams(),
     campaigns = useCatalog("/campaigns");
   const id = params.get("campaign") || "",
-    requestedTab = params.get("tab") || "overview",
+    // Old links used "assign"; the tab is now "Affiliates".
+    requestedTab = (params.get("tab") || "overview").replace(
+      /^assign$/,
+      "affiliates",
+    ),
+    postbackKey = (useLocation().state as { postbackKey?: string } | null)
+      ?.postbackKey,
     manage =
       user.role === "advertiser" ||
       (staff(user.role) &&
         (user.staff_permissions == null ||
           user.staff_permissions.includes("campaigns:write")));
+  // Offer18's order: set up, then partners, then limits, payouts and protection.
   const tabs = manage
     ? [
         "overview",
         "profile",
         "targeting",
-        "events",
-        "commission-rules",
-        "caps",
-        "targets",
         "destinations",
         "creatives",
+        "affiliates",
+        "caps",
+        "events",
+        "commission-rules",
         "traffic-rules",
-        "assign",
+        "targets",
         "url-preview",
       ]
     : ["overview", "profile", "events", "commission-rules", "creatives"];
   const tab = tabs.includes(requestedTab) ? requestedTab : "overview";
   const labels: Record<string, string> = {
-    overview: "Overview",
+    overview: "Home",
     profile: "General",
-    targeting: "Targeting and fraud",
-    events: "Events",
+    targeting: "Targeting",
+    events: "Events / Payout",
     "commission-rules": "Payout rules",
-    caps: "Caps",
+    caps: "Capping",
     targets: "Sales targets",
     destinations: "Landing pages",
     creatives: "Creatives",
-    "traffic-rules": "Traffic rules",
-    assign: "Publishers",
-    "url-preview": "Test destination",
+    "traffic-rules": "Anti-fraud",
+    affiliates: brand ? "Agencies" : "Affiliates",
+    "url-preview": "Test link",
   };
   const campaign = campaigns.data.find((c) => c.id === id);
   const users = useCatalog(manage && id ? "/users" : null);
@@ -266,9 +275,15 @@ export function CampaignOperations() {
   return (
     <>
       <PageHead
-        title={campaign?.name || "Campaign workspace"}
-        description="Manage setup, publisher access, traffic quality and payouts in one place."
+        title={campaign?.name || "Campaign"}
+        description="Everything about this campaign: setup, partners and links, limits, payouts and fraud rules."
       />
+      {postbackKey && (
+        <Secret
+          title="Advertiser postback key (shown once)"
+          value={postbackKey}
+        />
+      )}
       <Panel title="Select a campaign">
         <div className="network-form">
           <label>
@@ -442,9 +457,12 @@ export function CampaignOperations() {
               readOnly={!manage}
             />
           )}
-          {tab === "assign" && manage && (
+          {tab === "affiliates" && staff(user.role) && (
+            <CampaignAffiliates id={id} />
+          )}
+          {tab === "affiliates" && manage && (
             <RequestForm
-              title="Assign or revoke private campaign access"
+              title="Change or revoke a partner's access"
               path={`/campaigns/${id}/assign`}
               fields={[
                 { ...publisher, required: true },

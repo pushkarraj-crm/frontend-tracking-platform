@@ -3,7 +3,7 @@ import { campaignRuleFields } from "./campaign-rule-fields";
 import { useData, useCatalog } from "./hooks";
 import { money, date, short } from "./format";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowDownToLine,
   ArrowRight,
@@ -1718,22 +1718,11 @@ export function Billing() {
 export function Settings() {
   const { user } = useSession(),
     toast = useToast(),
-    [tab, setTab] = useState("account"),
+    [params, setParams] = useSearchParams(),
     [version, reload] = useReload(),
     [offset, setOffset] = useState(0),
     [secret, setSecret] = useState(""),
-    workspace = useData<Row>("/workspace"),
-    result = useData<Row[]>(
-      tab === "audit"
-        ? `/audit-events?offset=${offset}&limit=${size}`
-        : tab === "deliveries"
-          ? `/deliveries?offset=${offset}&limit=${size}`
-          : null,
-      version,
-    ),
-    people = useCatalog(
-      staff(user.role) && tab === "webhooks" ? "/users" : null,
-    );
+    workspace = useData<Row>("/workspace");
   const tabs = [
     "account",
     ...(["admin", "platform_admin"].includes(user.role) ? ["audit"] : []),
@@ -1748,6 +1737,21 @@ export function Settings() {
       ? ["webhooks"]
       : []),
   ];
+  // The sidebar links straight to a tab (Settings → Alerts); unknown tabs show Account.
+  const requested = params.get("tab") || "account",
+    tab = tabs.includes(requested) ? requested : "account",
+    setTab = (value: string) => setParams({ tab: value });
+  const result = useData<Row[]>(
+      tab === "audit"
+        ? `/audit-events?offset=${offset}&limit=${size}`
+        : tab === "deliveries"
+          ? `/deliveries?offset=${offset}&limit=${size}`
+          : null,
+      version,
+    ),
+    people = useCatalog(
+      staff(user.role) && tab === "webhooks" ? "/users" : null,
+    );
   return (
     <>
       <PageHead
