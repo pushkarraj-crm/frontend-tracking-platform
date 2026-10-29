@@ -1,4 +1,5 @@
 import { LoginGate } from "./login-gate";
+import { ActingBanner } from "./teams";
 import { CampaignOperations } from "./campaign-operations";
 import { NetworkOperations, NetworkTools } from "./network-operations";
 import { PartnerCallbacks } from "./callbacks-page";
@@ -418,6 +419,7 @@ function Layout() {
         </header>
         <main>
           <AccountTypeContext.Provider value={accountType}>
+            <ActingBanner />
             <Outlet />
           </AccountTypeContext.Provider>
         </main>

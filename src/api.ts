@@ -13,6 +13,9 @@ export interface User {
   api_enabled?: boolean;
   staff_permissions?: string[] | null;
   parent_user_id?: string;
+  manager_id?: string | null;
+  // Set when a team member is signed in to this account.
+  team_member?: { email: string; name: string | null } | null;
 }
 export interface Session {
   access_token: string;
@@ -32,6 +35,8 @@ export class ApiError extends Error {
 const base = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
 let session: Session | null = null;
 let refreshFlight: Promise<Session | null> | null = null;
+// The admin's own session while they use "log in as" on a partner.
+let ownSession: Session | null = null;
 let revision = 0;
 const listeners = new Set<() => void>();
 export function currentSession() {
@@ -42,6 +47,20 @@ export function onSession(listener: () => void) {
   return () => {
     listeners.delete(listener);
   };
+}
+export function isActingAsPartner() {
+  return ownSession !== null;
+}
+export async function logInAs(userId: string) {
+  const next = await send<Session>(`/users/${userId}/login-as`);
+  ownSession = session;
+  setSession({ ...next, csrf_token: session!.csrf_token });
+}
+export function returnToOwnAccount() {
+  if (!ownSession) return;
+  const own = ownSession;
+  ownSession = null;
+  setSession(own);
 }
 export function setSession(value: Session | null) {
   session = value;
@@ -101,6 +120,8 @@ export async function refresh() {
     const next = navigator.locks
       ? await navigator.locks.request("relay-session-refresh", run)
       : await run();
+    // A refresh always restores the signed-in person's own account.
+    ownSession = null;
     if (at === revision) setSession(next);
     return at === revision ? next : null;
   })().finally(() => {
@@ -141,6 +162,7 @@ export async function login(email: string, password: string) {
 }
 export async function endSession(all = false) {
   if (!session) return;
+  if (ownSession) return returnToOwnAccount();
   const perform = async () => {
     const csrfResponse = await checked(await raw("/auth/csrf"));
     const { csrf_token } = await csrfResponse.json();

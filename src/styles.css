@@ -2835,3 +2835,19 @@ a:focus-visible {
   background: #16152b;
   color: #ece9ff;
 }
+
+/* Shown while an admin uses "log in as" or a team member is signed in. */
+.acting-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 0 18px;
+  padding: 10px 16px;
+  border: 1px solid var(--lime);
+  border-radius: 12px;
+  background: var(--mint);
+  color: var(--navy);
+  font-size: 13px;
+}

@@ -361,13 +361,17 @@ const globalParameters: [string, string][] = [
   ],
   [
     "event",
-    "Campaign event code, e.g. lead, approved, disbursed, sale. Default: the campaign's main conversion.",
+    "Campaign event code, e.g. lead, approved, disbursed, sale. Default: the campaign's main conversion; install also counts as it. App event names like af_purchase match a stage coded purchase.",
   ],
   [
     "txn_id",
     "Recommended. Your order or application number; prevents double counting.",
   ],
   ["amount", "Sale amount for CPS (percentage) events; ignored for CPL."],
+  [
+    "payout",
+    "Revenue-share campaigns: the commission the advertiser pays you. The partner gets their percentage of it.",
+  ],
   ["currency", "Optional ISO code such as INR; must match the campaign."],
   [
     "status",
@@ -382,6 +386,11 @@ const globalParameters: [string, string][] = [
     "Optional extra values to store with the conversion.",
   ],
 ];
+
+const tokenUrl = (url: string) => {
+  const [base, token] = url.split("/pb/");
+  return `${base}/pb?token=${token}&click_id={click_id}&event={event}&txn_id={txn_id}&amount={amount}`;
+};
 
 function GlobalPostback({ admin }: { admin: boolean }) {
   const [version, setVersion] = useState(0),
@@ -408,6 +417,15 @@ function GlobalPostback({ admin }: { admin: boolean }) {
               Replace the values in braces with your advertiser platform's
               macros. GET and POST (form or JSON) are both accepted. Keep this
               URL private: it contains your account's secret.
+            </p>
+            <p>
+              <strong>For app attribution platforms</strong> (AppsFlyer, Adjust,
+              Branch) that keep one URL for every account, use the same secret
+              as a <code>token</code> parameter:
+            </p>
+            <p className="postback-url">
+              <code>{tokenUrl(url)}</code>
+              <CopyButton value={tokenUrl(url)} />
             </p>
             <Table
               rows={globalParameters.map(([name, meaning]) => ({

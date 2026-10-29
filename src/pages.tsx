@@ -21,9 +21,19 @@ import {
   Users,
   Zap,
 } from "lucide-react";
-import { api, download, endSession, query, send, type Row } from "./api";
+import {
+  api,
+  download,
+  endSession,
+  isActingAsPartner,
+  query,
+  send,
+  type Row,
+} from "./api";
 import { staff, useAccountType, useSession, useToast } from "./context";
 import { BlockedSources, RejectedTraffic } from "./sources-pages";
+import { AlertSettings } from "./alert-settings";
+import { LogInAsButton, ManagerPicker, TeamSettings } from "./teams";
 import {
   Badge,
   CopyButton,
@@ -560,6 +570,30 @@ export function Partners() {
                   </span>
                 ),
               },
+              ...(staff(user.role)
+                ? [
+                    {
+                      key: "manager_id",
+                      title: "Account manager",
+                      render: (r: Row) =>
+                        !["advertiser", "affiliate", "publisher"].includes(
+                          r.role,
+                        ) ? null : user.role === "admin" ? (
+                          <ManagerPicker
+                            partner={r}
+                            managers={(result.data || []).filter(
+                              (m) =>
+                                ["admin", "staff"].includes(m.role) && m.active,
+                            )}
+                            onSaved={reload}
+                          />
+                        ) : (
+                          (result.data || []).find((m) => m.id === r.manager_id)
+                            ?.email || "—"
+                        ),
+                    },
+                  ]
+                : []),
               {
                 key: "login",
                 title: "Login access",
@@ -575,26 +609,33 @@ export function Partners() {
                 render: (r) =>
                   user.role !== "staff" &&
                   r.id !== user.id && (
-                    <Action
-                      run={async () => {
-                        if (
-                          r.active &&
-                          !confirm(
-                            `Deactivate ${r.email}? Their sessions will be revoked.`,
+                    <div className="row-actions">
+                      {user.role === "admin" &&
+                        r.active &&
+                        ["advertiser", "affiliate", "publisher"].includes(
+                          r.role,
+                        ) && <LogInAsButton partner={r} />}
+                      <Action
+                        run={async () => {
+                          if (
+                            r.active &&
+                            !confirm(
+                              `Deactivate ${r.email}? Their sessions will be revoked.`,
+                            )
                           )
-                        )
-                          return;
-                        await send(
-                          `/users/${r.id}`,
-                          { active: !r.active },
-                          "PATCH",
-                        );
-                        reload();
-                        toast("Partner access updated.");
-                      }}
-                    >
-                      {r.active ? "Deactivate" : "Reactivate"}
-                    </Action>
+                            return;
+                          await send(
+                            `/users/${r.id}`,
+                            { active: !r.active },
+                            "PATCH",
+                          );
+                          reload();
+                          toast("Partner access updated.");
+                        }}
+                      >
+                        {r.active ? "Deactivate" : "Reactivate"}
+                      </Action>
+                    </div>
                   ),
               },
             ]}
@@ -1696,6 +1737,12 @@ export function Settings() {
   const tabs = [
     "account",
     ...(["admin", "platform_admin"].includes(user.role) ? ["audit"] : []),
+    ...(user.role === "admin" ? ["alerts"] : []),
+    ...(["affiliate", "advertiser", "publisher"].includes(user.role) &&
+    !user.team_member &&
+    !isActingAsPartner()
+      ? ["team"]
+      : []),
     ...(staff(user.role) ? ["deliveries"] : []),
     ...(["admin", "staff", "affiliate", "publisher"].includes(user.role)
       ? ["webhooks"]
@@ -1788,6 +1835,10 @@ export function Settings() {
             </div>
           </Panel>
         </div>
+      ) : tab === "alerts" ? (
+        <AlertSettings />
+      ) : tab === "team" ? (
+        <TeamSettings />
       ) : tab === "webhooks" ? (
         <Panel
           title="Conversion notifications"

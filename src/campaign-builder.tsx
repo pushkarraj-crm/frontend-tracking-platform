@@ -205,6 +205,7 @@ export function CampaignBuilder({
           deep_link_enabled: data.get("deep_links") === "on",
           initial_auto_approve: data.get("auto_approve") === "on",
           cap_action: value("cap_action"),
+          ...(model === "CPS" ? { percent_of: value("percent_of") } : {}),
         },
         tracking_rules: {
           countries: list("countries").map((v) => v.toUpperCase()),
@@ -439,18 +440,29 @@ export function CampaignBuilder({
                 </label>
               </>
             ) : (
-              <label>
-                Commission (% of sale)
-                <input
-                  name="sale_percentage"
-                  type="number"
-                  min="0.0001"
-                  max="100"
-                  step="0.0001"
-                  defaultValue={template.percentage || "10"}
-                  required
-                />
-              </label>
+              <>
+                <label>
+                  Commission (%)
+                  <input
+                    name="sale_percentage"
+                    type="number"
+                    min="0.0001"
+                    max="100"
+                    step="0.0001"
+                    defaultValue={template.percentage || "10"}
+                    required
+                  />
+                </label>
+                <label>
+                  Percentage of
+                  <select name="percent_of" defaultValue="sale">
+                    <option value="sale">The order value</option>
+                    <option value="commission">
+                      Advertiser's commission (revenue share)
+                    </option>
+                  </select>
+                </label>
+              </>
             )}
             <label className="checkbox">
               <input type="checkbox" name="auto_approve" /> Approve the main

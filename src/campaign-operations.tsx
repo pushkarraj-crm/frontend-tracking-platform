@@ -564,14 +564,30 @@ function Profile({ id, manage }: { id: string; manage: boolean }) {
           max: 100,
           help: "Notify when a cap crosses this percentage of its limit.",
         }),
-        select(
-          "cap_action",
-          "When a conversion cap is full",
-          ["refuse", "reject", "pending", "accept", "stop"],
-          {
-            help: "Refuse: the advertiser's postback gets an error. Reject or pending: record it with that status, uncounted. Accept: record it normally, uncounted. Stop: hold it as pending and pause the campaign.",
-          },
-        ),
+        text("cap_action", "When a conversion cap is full", {
+          options: [
+            { value: "refuse", label: "Refuse the conversion" },
+            { value: "reject", label: "Record it as rejected" },
+            { value: "pending", label: "Record it as pending" },
+            { value: "accept", label: "Accept it anyway" },
+            { value: "stop", label: "Hold it and pause the campaign" },
+          ],
+          help: "Conversions over the cap are never counted toward it. Refuse sends the advertiser's postback an error.",
+        }),
+        ...(profile.campaign_model === "CPS"
+          ? [
+              text("percent_of", "Commission is a percentage of", {
+                options: [
+                  { value: "sale", label: "The order value" },
+                  {
+                    value: "commission",
+                    label: "Advertiser's commission (revenue share)",
+                  },
+                ],
+                help: "Revenue share: the advertiser's postback sends its commission as payout; you keep it as revenue and the partner gets the percentage.",
+              }),
+            ]
+          : []),
         text("fallback_campaign_id", "Fallback campaign", {
           required: false,
           options: campaigns.data

@@ -13,6 +13,7 @@ import { useData } from "./hooks";
 import { staff, useAccountType, useSession } from "./context";
 import { date, money, short } from "./format";
 import { Badge, ErrorBox, Loading, PageHead, Panel, Table } from "./ui";
+import { AccountManagerCard } from "./teams";
 
 const toneColor: Record<string, string> = {
   violet: "#8b5cf6",
@@ -635,6 +636,9 @@ export function Dashboard() {
           <ArrowUpRight size={16} />
         </Link>
       </section>
+      {["advertiser", "affiliate", "publisher"].includes(user.role) && (
+        <AccountManagerCard />
+      )}
     </>
   );
 }
