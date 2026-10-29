@@ -2813,3 +2813,25 @@ a:focus-visible {
   .kpi-card { min-height: 0; }
   .kpi-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+.snippet {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin: 12px 0;
+  overflow: hidden;
+}
+.snippet-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--mint);
+}
+.snippet pre {
+  margin: 0;
+  padding: 12px;
+  overflow-x: auto;
+  max-height: 340px;
+  background: #16152b;
+  color: #ece9ff;
+}

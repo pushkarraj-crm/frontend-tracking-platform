@@ -20,6 +20,64 @@ import {
   postbackFields,
   unavailablePlatforms,
 } from "./platform-templates";
+import { storePlatforms } from "./store-snippets";
+
+// Copy-paste setup for online stores; sales reported by a browser stay pending until confirmed.
+export function StoreTracking() {
+  const settings = useData<Row>("/web-conversion-settings");
+  const [id, setId] = useState("shopify");
+  const platform = storePlatforms.find((p) => p.id === id)!;
+  return (
+    <Panel
+      title="Track sales from your online store"
+      subtitle="For Shopify, WooCommerce and other stores that can't send a server postback. Relay remembers the click on the store and reports the order from the thank-you page."
+    >
+      <div className="postback-content">
+        {settings.error && <ErrorBox error={settings.error} />}
+        {!settings.data && !settings.error && <Loading />}
+        {settings.data && (
+          <>
+            <label className="postback-select">
+              Your store
+              <select value={id} onChange={(e) => setId(e.target.value)}>
+                {storePlatforms.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <ol>
+              {platform.steps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+            {platform
+              .snippets(settings.data.endpoint, settings.data.sdk_url)
+              .map((s) => (
+                <div key={s.title} className="snippet">
+                  <div className="snippet-head">
+                    <strong>{s.title}</strong>
+                    <CopyButton value={s.code} label={`Copy ${s.title}`} />
+                  </div>
+                  <pre>
+                    <code>{s.code}</code>
+                  </pre>
+                </div>
+              ))}
+            <p className="muted">
+              Sales reported by a store page are recorded as pending, because
+              anyone can call a public page endpoint. Approve them in
+              Conversions, with a status postback, or by uploading the order
+              report. Coupon codes from Coupons are credited even without a
+              click. Razorpay Magic Checkout is not supported yet.
+            </p>
+          </>
+        )}
+      </div>
+    </Panel>
+  );
+}
 
 function CampaignSetup() {
   const { user } = useSession();
@@ -507,7 +565,10 @@ export function Postbacks() {
         }
       />
       {(user.role === "admin" || user.role === "staff") && (
-        <GlobalPostback admin={user.role === "admin"} />
+        <>
+          <GlobalPostback admin={user.role === "admin"} />
+          <StoreTracking />
+        </>
       )}
       {manager && <CampaignSetup />}
       {user.role === "publisher" && (
